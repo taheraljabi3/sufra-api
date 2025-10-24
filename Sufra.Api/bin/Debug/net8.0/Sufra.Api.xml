@@ -1,0 +1,65 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Sufra.Api</name>
+    </assembly>
+    <members>
+        <member name="M:Sufra.Api.Controllers.StudentHousingController.UpsertHousing(Sufra.Application.DTOs.StudentHousing.StudentHousingDto)">
+            <summary>
+            🏠 إضافة أو تحديث السكن الحالي للطالب (الوحدة + الغرفة + المنطقة)
+            </summary>
+            <remarks>
+            يجب أن يُرسل الطلب بهذا الشكل:
+            
+            {
+              "studentId": 1,
+              "housingUnitId": 12,
+              "roomNo": "455",
+              "zoneId": 1
+            }
+            </remarks>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentHousingController.GetCurrent(System.Int32)">
+            <summary>
+            📍 جلب موقع الطالب الحالي (الوحدة والغرفة والمنطقة)
+            </summary>
+            <param name="studentId">معرف الطالب</param>
+            <returns>بيانات السكن الحالي</returns>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentsController.GetAll">
+            <summary>
+            📋 جلب جميع الطلاب مع الأدوار.
+            </summary>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentsController.GetByUniversityId(System.String)">
+            <summary>
+            🔍 جلب طالب عبر الرقم الجامعي (University ID).
+            </summary>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentsController.Create(Sufra.Application.DTOs.Students.CreateStudentDto)">
+            <summary>
+            ➕ إنشاء طالب جديد (تسجيل حساب جديد).
+            </summary>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentsController.Login(Sufra.Api.Controllers.LoginDto)">
+            <summary>
+            🔐 تسجيل الدخول باستخدام الرقم الجامعي وكلمة المرور.
+            </summary>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentsController.Update(System.Int32,UpdateStudentDto)">
+            <summary>
+            ✏️ تحديث بيانات طالب عبر معرفه الداخلي (Id).
+            </summary>
+        </member>
+        <member name="M:Sufra.Api.Controllers.StudentsController.Delete(System.Int32)">
+            <summary>
+            🗑️ حذف طالب عبر معرفه الداخلي (Id).
+            </summary>
+        </member>
+        <member name="T:Sufra.Api.Controllers.LoginDto">
+            <summary>
+            DTO خاص بتسجيل الدخول.
+            </summary>
+        </member>
+    </members>
+</doc>

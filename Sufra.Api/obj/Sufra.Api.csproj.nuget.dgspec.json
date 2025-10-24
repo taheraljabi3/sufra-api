@@ -1,0 +1,311 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Api\\Sufra.Api.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Api\\Sufra.Api.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Api\\Sufra.Api.csproj",
+        "projectName": "Sufra.Api",
+        "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Api\\Sufra.Api.csproj",
+        "packagesPath": "C:\\Users\\taher\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Api\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\taher\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj": {
+                "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj"
+              },
+              "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Infrastructure\\Sufra.Infrastructure.csproj": {
+                "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Infrastructure\\Sufra.Infrastructure.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[12.0.1, )"
+            },
+            "Microsoft.AspNetCore.OpenApi": {
+              "target": "Package",
+              "version": "[8.0.21, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Swashbuckle.AspNetCore": {
+              "target": "Package",
+              "version": "[9.0.6, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.AspNetCore.App": {
+              "privateAssets": "none"
+            },
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.121/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj",
+        "projectName": "Sufra.Application",
+        "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj",
+        "packagesPath": "C:\\Users\\taher\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\taher\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj": {
+                "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[12.0.1, )"
+            },
+            "AutoMapper.Extensions.Microsoft.DependencyInjection": {
+              "target": "Package",
+              "version": "[12.0.1, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.121/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj",
+        "projectName": "Sufra.Domain",
+        "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj",
+        "packagesPath": "C:\\Users\\taher\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\taher\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.121/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    },
+    "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Infrastructure\\Sufra.Infrastructure.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Infrastructure\\Sufra.Infrastructure.csproj",
+        "projectName": "Sufra.Infrastructure",
+        "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Infrastructure\\Sufra.Infrastructure.csproj",
+        "packagesPath": "C:\\Users\\taher\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Infrastructure\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\taher\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config"
+        ],
+        "originalTargetFrameworks": [
+          "net8.0"
+        ],
+        "sources": {
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net8.0": {
+            "targetAlias": "net8.0",
+            "projectReferences": {
+              "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj": {
+                "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Application\\Sufra.Application.csproj"
+              },
+              "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj": {
+                "projectPath": "C:\\Users\\taher\\OneDrive\\Desktop\\Sufra\\Sufra.Domain\\Sufra.Domain.csproj"
+              }
+            }
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        }
+      },
+      "frameworks": {
+        "net8.0": {
+          "targetAlias": "net8.0",
+          "dependencies": {
+            "AutoMapper": {
+              "target": "Package",
+              "version": "[12.0.1, )"
+            },
+            "BCrypt.Net-Next": {
+              "target": "Package",
+              "version": "[4.0.3, )"
+            },
+            "Microsoft.EntityFrameworkCore": {
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.0.10, )"
+            },
+            "Microsoft.EntityFrameworkCore.SqlServer": {
+              "target": "Package",
+              "version": "[9.0.10, )"
+            }
+          },
+          "imports": [
+            "net461",
+            "net462",
+            "net47",
+            "net471",
+            "net472",
+            "net48",
+            "net481"
+          ],
+          "assetTargetFallback": true,
+          "warn": true,
+          "frameworkReferences": {
+            "Microsoft.NETCore.App": {
+              "privateAssets": "all"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\8.0.121/PortableRuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

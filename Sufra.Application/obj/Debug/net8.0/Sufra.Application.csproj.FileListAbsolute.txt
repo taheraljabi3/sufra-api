@@ -1,0 +1,15 @@
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\bin\Debug\net8.0\Sufra.Application.deps.json
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\bin\Debug\net8.0\Sufra.Application.dll
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\bin\Debug\net8.0\Sufra.Application.pdb
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\bin\Debug\net8.0\Sufra.Domain.dll
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\bin\Debug\net8.0\Sufra.Domain.pdb
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.csproj.AssemblyReference.cache
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.AssemblyInfoInputs.cache
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.AssemblyInfo.cs
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.csproj.CoreCompileInputs.cache
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.csproj.CopyComplete
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.dll
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\refint\Sufra.Application.dll
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\Sufra.Application.pdb
+C:\Users\taher\OneDrive\Desktop\Sufra\Sufra.Application\obj\Debug\net8.0\ref\Sufra.Application.dll

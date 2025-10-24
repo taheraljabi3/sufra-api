@@ -1,0 +1,50 @@
+🧠 برومبت وصفي لتصميم قاعدة بيانات سُفرة (Sufra DB Prompt)
+I want you to design a fully normalized relational database (3NF) for a university meal delivery system called "Sufra".
+
+The goal of the system is:
+- University students subscribe to a monthly meal delivery service (30 SAR/month)
+- Students can request meals (breakfast, lunch, dinner) to their dorm rooms or classrooms
+- Delivery is performed by other students (couriers) assigned to specific zones (housing or class areas)
+- Requests are grouped into delivery batches for couriers
+
+Core Concepts:
+1️⃣ Students (users of the system, with a default dorm residence)
+2️⃣ Couriers (students or staff who deliver meals, each assigned to a zone)
+3️⃣ Zones (delivery areas such as housing units or academic buildings)
+4️⃣ Subscriptions (monthly student plans)
+5️⃣ Meal Requests (students requesting meals)
+6️⃣ Batches (grouping multiple meal requests for delivery)
+7️⃣ Delivery Proof (confirmation that courier delivered the meal)
+8️⃣ Housing tracking for students (student_housing table)
+
+Tables Required (3NF, no data redundancy):
+- students
+- student_housing
+- couriers
+- courier_schedule (future support)
+- zones
+- subscriptions
+- meal_requests
+- batches
+- batch_items
+- delivery_proofs
+
+Important Rules:
+- One student may have many subscriptions (but currently only one active)
+- A courier must be a student or university staff
+- A zone can cover housing units or classroom buildings
+- A meal request cannot be canceled once submitted
+- A batch contains up to 10 meal requests for a courier
+- Delivery proof is recorded manually (future: QR or PIN)
+
+Database Requirements:
+- SQL Server style (T-SQL)
+- Use NVARCHAR for Arabic support
+- Use IDENTITY PKs
+- Use CHECK constraints for ENUM-like fields
+- Foreign Keys must be defined properly
+
+Output Expected:
+- Entity Relationship Model (ERD)
+- Normalized schema in SQL (CREATE TABLE)
+- Clear PK/FK relationships
