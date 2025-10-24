@@ -14,7 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 // ============================================================
 builder.Services.AddDbContext<SufraDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
-
 Console.WriteLine($"🔗 DB Connection: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 
 // ============================================================
