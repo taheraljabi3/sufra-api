@@ -78,18 +78,15 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ============================================================
-// 🔍 تفعيل Swagger أثناء التطوير فقط
+// 🔍 تفعيل Swagger دائمًا (في dev و prod)
 // ============================================================
-if (app.Environment.IsDevelopment())
-{
-  app.UseSwagger();
+app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.DocumentTitle = "📘 Sufra API Docs";
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-    options.RoutePrefix = "docs"; // 👈 سيتوفر على /docs بدل swagger/
+    options.RoutePrefix = "docs"; // 👈 سيعمل على /docs
 });
-}
 
 // ============================================================
 // 🔐 الإعدادات العامة للتطبيق
@@ -115,4 +112,5 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
 
