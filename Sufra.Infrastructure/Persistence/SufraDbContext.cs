@@ -21,7 +21,6 @@ namespace Sufra.Infrastructure.Persistence
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<StudentHousing> StudentHousing { get; set; }
 
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -60,7 +59,7 @@ namespace Sufra.Infrastructure.Persistence
                 .HasOne(m => m.Zone)
                 .WithMany(z => z.MealRequests)
                 .HasForeignKey(m => m.ZoneId)
-                .OnDelete(DeleteBehavior.NoAction); // ✅ منع التعارض مع FK
+                .OnDelete(DeleteBehavior.NoAction);
 
             // ============================================================
             // 🧩 DeliveryProof ↔ MealRequest (1 - 1)
@@ -151,6 +150,17 @@ namespace Sufra.Infrastructure.Persistence
                 .WithMany(z => z.StudentHousings)
                 .HasForeignKey(sh => sh.ZoneId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================================
+            // ✅ تصغير أسماء الجداول والأعمدة لتتوافق مع PostgreSQL
+            // ============================================================
+            foreach (var entity in modelBuilder.Model.GetEntityTypes())
+            {
+                entity.SetTableName(entity.GetTableName()!.ToLowerInvariant());
+
+                foreach (var property in entity.GetProperties())
+                    property.SetColumnName(property.GetColumnBaseName().ToLowerInvariant());
+            }
         }
     }
 }
