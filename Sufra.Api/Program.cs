@@ -82,12 +82,13 @@ var app = builder.Build();
 // ============================================================
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.DocumentTitle = "📘 Sufra API Docs";
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-    });
+  app.UseSwagger();
+app.UseSwaggerUI(options =>
+{
+    options.DocumentTitle = "📘 Sufra API Docs";
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
+    options.RoutePrefix = "docs"; // 👈 سيتوفر على /docs بدل swagger/
+});
 }
 
 // ============================================================
@@ -114,3 +115,4 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
