@@ -13,8 +13,9 @@ var builder = WebApplication.CreateBuilder(args);
 // 🧩 إعداد قاعدة البيانات
 // ============================================================
 builder.Services.AddDbContext<SufraDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SufraDb")));
-Console.WriteLine($"🔗 DB Connection: {builder.Configuration.GetConnectionString("SufraDb")}");
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+Console.WriteLine($"🔗 DB Connection: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 
 // ============================================================
 // ⚙️ تسجيل الخدمات (Dependency Injection)
