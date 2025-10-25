@@ -1,5 +1,9 @@
 using System.Reflection;
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using Sufra.Infrastructure.Persistence;
 using Sufra.Application.Mapping;
 using Sufra.Application.Interfaces;
@@ -13,7 +17,8 @@ var builder = WebApplication.CreateBuilder(args);
 // 🧩 إعداد قاعدة البيانات
 // ============================================================
 builder.Services.AddDbContext<SufraDbContext>(options =>
-    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 Console.WriteLine($"🔗 DB Connection: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 
 // ============================================================
@@ -34,6 +39,33 @@ builder.Services.AddScoped<IStudentHousingService, StudentHousingService>();
 builder.Services.AddScoped<IZoneService, ZoneService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 
+// ============================================================
+// 🔐 إعداد الـ JWT Authentication
+// ============================================================
+
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUFRA_SECRET_KEY_2025_!CHANGE_THIS!";
+var keyBytes = Encoding.ASCII.GetBytes(jwtKey);
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.RequireHttpsMetadata = false; // في التطوير يمكن تعطيله
+    options.SaveToken = true;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // ============================================================
 // 🌐 إعداد الـ Controllers و JSON
@@ -43,33 +75,61 @@ builder.Services.AddControllers()
     {
         x.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         x.JsonSerializerOptions.DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull;
-        x.JsonSerializerOptions.PropertyNamingPolicy = null; // 👈 لحفظ أسماء الحقول الأصلية (مثل RoleName و UniversityId)
+        x.JsonSerializerOptions.PropertyNamingPolicy = null;
         x.JsonSerializerOptions.WriteIndented = true;
     });
 
 // ============================================================
-// 📘 إعداد Swagger
+// 📘 إعداد Swagger مع دعم JWT
 // ============================================================
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Sufra API",
         Version = "v1",
         Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\n\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والتوصيل.",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        Contact = new OpenApiContact
         {
             Name = "فريق تطوير سُفرة",
             Email = "support@sufra.sa"
         }
     });
 
-    // 🧩 تحميل تعليقات XML (من المشروع الحالي)
+    // 🧩 تحميل تعليقات XML (للتوثيق التلقائي)
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath);
+
+    // 🧱 دعم إدخال التوكن في Swagger UI
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "أدخل التوكن هنا بصيغة: **Bearer {your token}**",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+
+    // 🧩 تجنب تضارب الأسماء في DTOs
+    options.CustomSchemaIds(type => type.FullName);
 });
 
 // ============================================================
@@ -78,15 +138,18 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ============================================================
-// 🔍 تفعيل Swagger دائمًا (في dev و prod)
+// 🔍 تفعيل Swagger أثناء التطوير فقط
 // ============================================================
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.DocumentTitle = "📘 Sufra API Docs";
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-    options.RoutePrefix = "docs"; // 👈 سيعمل على /docs
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.DocumentTitle = "📘 Sufra API Docs";
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
+        options.RoutePrefix = "docs"; // يمكن الوصول عبر /docs
+    });
+}
 
 // ============================================================
 // 🔐 الإعدادات العامة للتطبيق
@@ -98,19 +161,25 @@ app.UseCors(policy =>
           .AllowAnyMethod()
           .AllowAnyHeader());
 
+// ✅ تفعيل المصادقة والتفويض
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
 
 // ============================================================
-// 🔧 Endpoint اختباري (اختياري)
+// 🔧 Endpoint اختباري
+// ============================================================
 app.MapGet("/ping", () => Results.Ok("✅ Sufra API is running successfully!"));
 
+// ============================================================
+// 🚀 تشغيل التطبيق
+// ============================================================
 app.Run();
 
 // ------------------------------------------------------------
-// ✅ سجل WeatherForecast (اختباري)
+// ✅ سجل WeatherForecast (اختياري)
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
-
-

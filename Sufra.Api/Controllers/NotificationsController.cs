@@ -1,9 +1,11 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sufra.Application.DTOs.Notifications;
 using Sufra.Application.Interfaces;
 
-namespace Sufra.Api.Controllers
+namespace Sufra.API.Controllers
 {
+    [Authorize] // ✅ حماية جميع العمليات بالتوكن
     [ApiController]
     [Route("api/[controller]")]
     public class NotificationsController : ControllerBase
@@ -20,17 +22,25 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 📬 جلب جميع إشعارات المستخدم (مع دعم role=owner)
+        // 📬 جلب جميع إشعارات المستخدم (حسب الدور)
         // ============================================================
-        [HttpGet("{role}/{userId:int}")]
-        public async Task<IActionResult> GetByUser(string role, int userId, [FromQuery] bool all = false)
+        [HttpGet]
+        public async Task<IActionResult> GetByUser([FromQuery] bool all = false)
         {
             try
             {
-                var normalizedRole = role.ToLower();
+                // 📌 استخراج بيانات المستخدم من التوكن
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                var roleClaim = User.FindFirst("Role")?.Value ?? "student";
 
-                // 👑 المالك يشاهد جميع الإشعارات (بدون فلترة userId/role)
-                var notifications = normalizedRole == "owner" || all
+                if (userIdClaim == null)
+                    return Unauthorized(new { message = "❌ لم يتم التعرف على المستخدم من التوكن." });
+
+                int userId = int.Parse(userIdClaim);
+                string normalizedRole = roleClaim.ToLower();
+
+                // 👑 المالك أو الأدمن يمكنه جلب جميع الإشعارات
+                var notifications = (normalizedRole == "owner" || normalizedRole == "admin" || all)
                     ? await _notificationService.GetByUserAsync(0, "owner")
                     : await _notificationService.GetByUserAsync(userId, normalizedRole);
 
@@ -51,7 +61,7 @@ namespace Sufra.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ خطأ أثناء جلب الإشعارات للمستخدم {UserId}", userId);
+                _logger.LogError(ex, "❌ خطأ أثناء جلب الإشعارات للمستخدم");
                 return StatusCode(500, new
                 {
                     message = "حدث خطأ أثناء جلب الإشعارات.",
@@ -61,17 +71,23 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🆕 جلب الإشعارات غير المقروءة فقط (مع دعم owner)
+        // 🆕 جلب الإشعارات غير المقروءة فقط
         // ============================================================
-        [HttpGet("{role}/{userId:int}/unread")]
-        public async Task<IActionResult> GetUnread(string role, int userId, [FromQuery] bool all = false)
+        [HttpGet("unread")]
+        public async Task<IActionResult> GetUnread([FromQuery] bool all = false)
         {
             try
             {
-                var normalizedRole = role.ToLower();
+                var userIdClaim = User.FindFirst("UserId")?.Value;
+                var roleClaim = User.FindFirst("Role")?.Value ?? "student";
 
-                // 👑 المالك يشاهد جميع الإشعارات غير المقروءة في النظام
-                var notifications = normalizedRole == "owner" || all
+                if (userIdClaim == null)
+                    return Unauthorized(new { message = "❌ لم يتم التعرف على المستخدم من التوكن." });
+
+                int userId = int.Parse(userIdClaim);
+                string normalizedRole = roleClaim.ToLower();
+
+                var notifications = (normalizedRole == "owner" || normalizedRole == "admin" || all)
                     ? await _notificationService.GetUnreadAsync(0, "owner")
                     : await _notificationService.GetUnreadAsync(userId, normalizedRole);
 
@@ -92,7 +108,7 @@ namespace Sufra.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ خطأ أثناء جلب الإشعارات غير المقروءة للمستخدم {UserId}", userId);
+                _logger.LogError(ex, "❌ خطأ أثناء جلب الإشعارات غير المقروءة");
                 return StatusCode(500, new
                 {
                     message = "حدث خطأ أثناء جلب الإشعارات غير المقروءة.",
@@ -102,7 +118,7 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // ✅ تحديد إشعار كمقروء
+        // ✅ تحديد إشعار كمقروء (للمستخدم الحالي فقط)
         // ============================================================
         [HttpPut("{id:int}/read")]
         public async Task<IActionResult> MarkAsRead(int id)
@@ -124,7 +140,7 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🗑️ حذف إشعار
+        // 🗑️ حذف إشعار (للمستخدم أو الأدمن)
         // ============================================================
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id)
@@ -146,8 +162,9 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // ➕ إنشاء إشعار يدوي (اختياري - للاختبار أو المشرفين)
+        // ➕ إنشاء إشعار يدوي (خاص بالأدمن فقط)
         // ============================================================
+        [Authorize(Roles = "admin,owner")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] NotificationDto dto)
         {
@@ -172,8 +189,9 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // ➕ إنشاء إشعارات جماعية (مثلاً عند إشعار عدة مندوبين دفعة واحدة)
+        // ➕ إنشاء إشعارات جماعية (خاص بالأدمن فقط)
         // ============================================================
+        [Authorize(Roles = "admin,owner")]
         [HttpPost("bulk")]
         public async Task<IActionResult> CreateMany([FromBody] IEnumerable<NotificationDto> dtos)
         {

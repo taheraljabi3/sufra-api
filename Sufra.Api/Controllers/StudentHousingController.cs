@@ -1,19 +1,23 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sufra.Application.DTOs.StudentHousing;
 using Sufra.Application.Interfaces;
 using Sufra.Domain.Entities;
 
-namespace Sufra.Api.Controllers
+namespace Sufra.API.Controllers
 {
+    [Authorize] // ✅ تفعيل الحماية بالتوكن
     [ApiController]
     [Route("api/[controller]")]
     public class StudentHousingController : ControllerBase
     {
         private readonly IStudentHousingService _housingService;
+        private readonly ILogger<StudentHousingController> _logger;
 
-        public StudentHousingController(IStudentHousingService housingService)
+        public StudentHousingController(IStudentHousingService housingService, ILogger<StudentHousingController> logger)
         {
             _housingService = housingService;
+            _logger = logger;
         }
 
         // =====================================================================
@@ -56,6 +60,7 @@ namespace Sufra.Api.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "❌ خطأ أثناء تنفيذ UpsertHousing");
                 return StatusCode(500, new { message = "⚠️ خطأ غير متوقع.", error = ex.Message });
             }
         }
@@ -66,6 +71,7 @@ namespace Sufra.Api.Controllers
         /// </summary>
         /// <param name="studentId">معرف الطالب</param>
         /// <returns>بيانات السكن الحالي</returns>
+        [AllowAnonymous] // ✅ مفتوح بدون توكن (اختياري)
         [HttpGet("{studentId:int}")]
         public async Task<IActionResult> GetCurrent(int studentId)
         {
@@ -93,6 +99,7 @@ namespace Sufra.Api.Controllers
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "❌ خطأ أثناء تنفيذ GetCurrent");
                 return StatusCode(500, new { message = "⚠️ خطأ غير متوقع.", error = ex.Message });
             }
         }

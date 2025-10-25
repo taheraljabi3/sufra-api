@@ -1,11 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sufra.Application.DTOs.Deliveries;
 using Sufra.Application.Interfaces;
 
-namespace Sufra.Api.Controllers
+namespace Sufra.API.Controllers
 {
+    [Authorize] // ✅ حماية كل الكنترولر بالتوكن
     [ApiController]
     [Route("api/[controller]")]
+    [Tags("🚚 Deliveries API")]
     public class DeliveriesController : ControllerBase
     {
         private readonly IDeliveryService _deliveryService;
@@ -18,21 +21,35 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🚴‍♂️ 1️⃣ جلب جميع المهام الخاصة بمندوب معين
+        /// <summary>🚴‍♂️ جلب جميع المهام الخاصة بالمندوب الحالي (من التوكن)</summary>
         // ============================================================
-        [HttpGet("courier/{courierId}")]
-        public async Task<IActionResult> GetByCourier(int courierId)
+        [Authorize(Roles = "Courier,Admin,Owner")]
+        [HttpGet("courier")]
+        public async Task<IActionResult> GetByCurrentCourier()
         {
             try
             {
+                // 🧭 جلب رقم المندوب من التوكن
+                var courierIdClaim = User.FindFirst("UserId")?.Value;
+                var role = User.FindFirst("Role")?.Value ?? "Courier";
+
+                if (courierIdClaim == null)
+                    return Unauthorized(new { message = "❌ لا يمكن تحديد هوية المندوب من التوكن." });
+
+                int courierId = int.Parse(courierIdClaim);
+
                 var result = await _deliveryService.GetByCourierAsync(courierId);
 
                 if (result == null || !result.Any())
-                    return Ok(new { message = "ℹ️ لا توجد مهام حالياً لهذا المندوب في منطقته.", tasks = Array.Empty<object>() });
+                    return Ok(new
+                    {
+                        message = "ℹ️ لا توجد مهام حالياً لهذا المندوب.",
+                        tasks = Array.Empty<object>()
+                    });
 
                 return Ok(new
                 {
-                    message = $"✅ تم جلب {result.Count()} مهمة نشطة في منطقة المندوب.",
+                    message = $"✅ تم جلب {result.Count()} مهمة نشطة بنجاح.",
                     tasks = result
                 });
             }
@@ -42,20 +59,30 @@ namespace Sufra.Api.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ خطأ أثناء جلب مهام المندوب {CourierId}", courierId);
+                _logger.LogError(ex, "❌ خطأ أثناء جلب مهام المندوب الحالي");
                 return StatusCode(500, new { message = "حدث خطأ أثناء جلب المهام", details = ex.Message });
             }
         }
 
         // ============================================================
-        // 📦 2️⃣ تأكيد تسليم الوجبة من قبل المندوب
+        /// <summary>📦 تأكيد تسليم الطلب من قبل المندوب</summary>
         // ============================================================
+        [Authorize(Roles = "Courier,Admin,Owner")]
         [HttpPost("confirm")]
         public async Task<IActionResult> Confirm([FromBody] CreateDeliveryProofDto dto)
         {
             try
             {
+                // يمكننا أيضًا التحقق من أن المستخدم الحالي هو نفس المندوب
+                var courierIdClaim = User.FindFirst("UserId")?.Value;
+                if (courierIdClaim == null)
+                    return Unauthorized(new { message = "❌ لا يمكن تحديد هوية المندوب من التوكن." });
+
+                int courierId = int.Parse(courierIdClaim);
+                dto.CourierId = courierId; // ✅ ضمان التوافق مع المندوب الحالي
+
                 var result = await _deliveryService.ConfirmDeliveryAsync(dto);
+
                 return Ok(new
                 {
                     message = "✅ تم تأكيد تسليم الطلب بنجاح.",
@@ -74,8 +101,9 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🧭 3️⃣ (للأدمن) جلب جميع عمليات التوصيل لجميع المندوبين
+        /// <summary>🧭 (للأدمن أو المالك) جلب جميع عمليات التوصيل</summary>
         // ============================================================
+        [Authorize(Roles = "Admin,Owner")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -84,7 +112,11 @@ namespace Sufra.Api.Controllers
                 var result = await _deliveryService.GetAllAsync();
 
                 if (result == null || !result.Any())
-                    return Ok(new { message = "ℹ️ لا توجد عمليات توصيل مسجلة حالياً.", deliveries = Array.Empty<object>() });
+                    return Ok(new
+                    {
+                        message = "ℹ️ لا توجد عمليات توصيل مسجلة حالياً.",
+                        deliveries = Array.Empty<object>()
+                    });
 
                 return Ok(new
                 {

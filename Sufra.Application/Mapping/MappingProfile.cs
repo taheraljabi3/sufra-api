@@ -48,6 +48,9 @@ namespace Sufra.Application.Mapping
             // 🧾 التسليمات
             CreateMap<DeliveryProof, DeliveryProofDto>().ReverseMap();
             CreateMap<CreateDeliveryProofDto, DeliveryProof>();
+
+            CreateMap<CreateZoneDto, Zone>();
+            CreateMap<Zone, ZoneDto>();
         }
     }
 }

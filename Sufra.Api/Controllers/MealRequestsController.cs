@@ -1,10 +1,12 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sufra.Application.DTOs.MealRequests;
 using Sufra.Application.DTOs.Notifications;
 using Sufra.Application.Interfaces;
 
-namespace Sufra.Api.Controllers
+namespace Sufra.API.Controllers
 {
+    [Authorize] // ✅ حماية جميع العمليات بتوكن JWT
     [ApiController]
     [Route("api/[controller]")]
     public class MealRequestsController : ControllerBase
@@ -24,8 +26,9 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🧾 جلب جميع الطلبات
+        // 🧾 جلب جميع الطلبات (للمشرف فقط)
         // ============================================================
+        [Authorize(Roles = "Admin")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -38,7 +41,7 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🧍‍♂️ جلب الطلبات الخاصة بالطالب
+        // 🧍‍♂️ جلب الطلبات الخاصة بالطالب (مفتوح للطالب بنفسه)
         // ============================================================
         [HttpGet("student/{studentId}")]
         public async Task<IActionResult> GetByStudent(int studentId)
@@ -55,8 +58,9 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🚴‍♂️ جلب الطلبات حسب المندوب (منطقته)
+        // 🚴‍♂️ جلب الطلبات حسب المندوب (مفتوح للمندوبين فقط)
         // ============================================================
+        [Authorize(Roles = "Courier,Admin")]
         [HttpGet("courier/{courierId}")]
         public async Task<IActionResult> GetByCourier(int courierId)
         {
@@ -89,7 +93,7 @@ namespace Sufra.Api.Controllers
         }
 
         // ============================================================
-        // 🔍 جلب طلب واحد
+        // 🔍 جلب طلب واحد (مفتوح للجميع بشرط أن يكون صاحب الطلب)
         // ============================================================
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
@@ -101,43 +105,45 @@ namespace Sufra.Api.Controllers
             return Ok(result);
         }
 
-// ============================================================
-// 📢 تحديث حالة الطلب الحالي وإرسال إشعارات للمندوبين في نفس المنطقة
-// ============================================================
-[HttpPost("notify")]
-public async Task<IActionResult> NotifyCouriers([FromBody] CreateMealRequestDto dto)
-{
-    try
-    {
-        // 🧾 تحديث الطلب الحالي وإرسال الإشعارات
-        var result = await _mealRequestService.NotifyCouriersOnlyAsync(dto);
-
-        if (result == null)
-            return NotFound(new
+        // ============================================================
+        // 📢 تحديث حالة الطلب الحالي وإرسال إشعارات للمندوبين في نفس المنطقة
+        // ============================================================
+        [Authorize(Roles = "Student,Admin")] // الطالب هو من يرسل الطلب غالبًا
+        [HttpPost("notify")]
+        public async Task<IActionResult> NotifyCouriers([FromBody] CreateMealRequestDto dto)
+        {
+            try
             {
-                message = "⚠️ لم يتم العثور على طلب مطابق لهذا الطالب في هذا اليوم أو الفترة."
-            });
+                var result = await _mealRequestService.NotifyCouriersOnlyAsync(dto);
 
-        return Ok(new
-        {
-            message = "✅ تم تحديث حالة الطلب وإشعار المندوبين بنجاح.",
-            requestId = result.Id,
-            newStatus = result.Status
-        });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "❌ خطأ أثناء تحديث الطلب وإرسال إشعار للمندوبين للطالب {StudentId}", dto.StudentId);
-        return StatusCode(500, new
-        {
-            message = "حدث خطأ أثناء تحديث الطلب أو إرسال الإشعارات.",
-            details = ex.Message
-        });
-    }
-}
+                if (result == null)
+                    return NotFound(new
+                    {
+                        message = "⚠️ لم يتم العثور على طلب مطابق لهذا الطالب في هذا اليوم أو الفترة."
+                    });
+
+                return Ok(new
+                {
+                    message = "✅ تم تحديث حالة الطلب وإشعار المندوبين بنجاح.",
+                    requestId = result.Id,
+                    newStatus = result.Status
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ خطأ أثناء إشعار المندوبين للطالب {StudentId}", dto.StudentId);
+                return StatusCode(500, new
+                {
+                    message = "حدث خطأ أثناء تحديث الطلب أو إرسال الإشعارات.",
+                    details = ex.Message
+                });
+            }
+        }
+
         // ============================================================
-        // 🚴‍♂️ قبول الطلب من أحد المندوبين (PUT)
+        // 🚴‍♂️ قبول الطلب من أحد المندوبين
         // ============================================================
+        [Authorize(Roles = "Courier,Admin")]
         [HttpPut("{requestId:int}/accept/{courierId:int}")]
         public async Task<IActionResult> AcceptRequest(int requestId, int courierId)
         {
@@ -170,8 +176,9 @@ public async Task<IActionResult> NotifyCouriers([FromBody] CreateMealRequestDto 
         }
 
         // ============================================================
-        // 🔄 تحديث حالة الطلب + إشعار الطالب
+        // 🔄 تحديث حالة الطلب (من المندوب أو الأدمن)
         // ============================================================
+        [Authorize(Roles = "Courier,Admin")]
         [HttpPut("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromBody] UpdateMealRequestStatusDto dto)
         {

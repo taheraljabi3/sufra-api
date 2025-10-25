@@ -8,5 +8,11 @@ namespace Sufra.Application.Interfaces
     {
         Task<List<ZoneDto>> GetAllAsync();
         Task<ZoneDto?> GetByIdAsync(int id);
+        Task<ZoneDto?> UpdateAsync(int id, UpdateZoneDto dto);
+        Task<bool> DeleteAsync(int id);
+        Task<ZoneDto> CreateAsync(CreateZoneDto dto);
+
+        // ✅ دوال التعديل والحذف (كي لا تتكرر الأخطاء لاحقًا)
     }
+    
 }

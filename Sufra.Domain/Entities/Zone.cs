@@ -14,5 +14,8 @@ namespace Sufra.Domain.Entities
         public ICollection<Courier> Couriers { get; set; } = new List<Courier>();
         public ICollection<MealRequest> MealRequests { get; set; } = new List<MealRequest>();
         public ICollection<Batch> Batches { get; set; } = new List<Batch>();
+
+        public DateTime? UpdatedAt { get; set; }
+
     }
 }
