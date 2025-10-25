@@ -14,10 +14,10 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// 🧩 إعداد قاعدة البيانات
+// 🧩 إعداد قاعدة البيانات (PostgreSQL)
 // ============================================================
 builder.Services.AddDbContext<SufraDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 Console.WriteLine($"🔗 DB Connection: {builder.Configuration.GetConnectionString("DefaultConnection")}");
 
@@ -42,7 +42,6 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 // ============================================================
 // 🔐 إعداد الـ JWT Authentication
 // ============================================================
-
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUFRA_SECRET_KEY_2025_!CHANGE_THIS!";
 var keyBytes = Encoding.ASCII.GetBytes(jwtKey);
 
@@ -53,7 +52,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false; // في التطوير يمكن تعطيله
+    options.RequireHttpsMetadata = true; // ✅ في Render، يجب أن يكون HTTPS
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -89,7 +88,7 @@ builder.Services.AddSwaggerGen(options =>
     {
         Title = "Sufra API",
         Version = "v1",
-        Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\n\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والتوصيل.",
+        Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والمندوبين.",
         Contact = new OpenApiContact
         {
             Name = "فريق تطوير سُفرة",
@@ -97,13 +96,13 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🧩 تحميل تعليقات XML (للتوثيق التلقائي)
+    // 🧩 تحميل تعليقات XML للتوثيق التلقائي
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath);
 
-    // 🧱 دعم إدخال التوكن في Swagger UI
+    // 🔐 دعم إدخال التوكن في Swagger UI
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "أدخل التوكن هنا بصيغة: **Bearer {your token}**",
@@ -128,7 +127,7 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🧩 تجنب تضارب الأسماء في DTOs
+    // 🧩 لتفادي تعارض أسماء DTOs
     options.CustomSchemaIds(type => type.FullName);
 });
 
@@ -138,24 +137,22 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ============================================================
-// 🔍 تفعيل Swagger أثناء التطوير فقط
+// 🔍 تفعيل Swagger دائمًا (في dev و prod)
 // ============================================================
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.DocumentTitle = "📘 Sufra API Docs";
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-        options.RoutePrefix = "docs"; // يمكن الوصول عبر /docs
-    });
-}
+    options.DocumentTitle = "📘 Sufra API Docs";
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
+    options.RoutePrefix = "docs"; // ✅ يمكن الوصول من /docs
+});
 
 // ============================================================
 // 🔐 الإعدادات العامة للتطبيق
 // ============================================================
 app.UseHttpsRedirection();
 
+// ✅ السماح للـ Frontend بالوصول من أي دومين (مثلاً Flutter أو Retool)
 app.UseCors(policy =>
     policy.AllowAnyOrigin()
           .AllowAnyMethod()
