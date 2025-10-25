@@ -18,8 +18,7 @@ namespace Sufra.Infrastructure.Persistence
         public DbSet<BatchItem> BatchItems => Set<BatchItem>();
         public DbSet<DeliveryProof> DeliveryProofs => Set<DeliveryProof>();
         public DbSet<Role> Roles => Set<Role>();
-        public DbSet<Notification> Notifications { get; set; }
-        public DbSet<StudentHousing> StudentHousing { get; set; }
+        public DbSet<Notification> Notifications => Set<Notification>();
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -60,7 +59,7 @@ namespace Sufra.Infrastructure.Persistence
                 .HasOne(m => m.Zone)
                 .WithMany(z => z.MealRequests)
                 .HasForeignKey(m => m.ZoneId)
-                .OnDelete(DeleteBehavior.NoAction); // ✅ منع التعارض مع FK
+                .OnDelete(DeleteBehavior.NoAction);
 
             // ============================================================
             // 🧩 DeliveryProof ↔ MealRequest (1 - 1)
@@ -151,6 +150,19 @@ namespace Sufra.Infrastructure.Persistence
                 .WithMany(z => z.StudentHousings)
                 .HasForeignKey(sh => sh.ZoneId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // ============================================================
+            // ⚙️ توحيد أسماء الجداول بالحروف الصغيرة (PostgreSQL)
+            // ============================================================
+            foreach (var entity in modelBuilder.Model.GetEntityTypes())
+            {
+                // تحويل اسم الجدول إلى lowercase
+                entity.SetTableName(entity.GetTableName()?.ToLower());
+
+                // تحويل أسماء الأعمدة إلى lowercase أيضًا
+                foreach (var property in entity.GetProperties())
+                    property.SetColumnName(property.GetColumnBaseName().ToLower());
+            }
         }
     }
 }
