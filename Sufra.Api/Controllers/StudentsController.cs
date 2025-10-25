@@ -37,7 +37,7 @@ namespace Sufra.API.Controllers
 
         // =====================================================================
         /// <summary>
-        /// 📋 جلب جميع الطلاب (للمشرف فقط)
+        /// 📋 جلب جميع الطلاب (للمشرف أو الأونر فقط)
         /// </summary>
         [Authorize(Roles = "admin,owner")]
         [HttpGet]
@@ -63,7 +63,7 @@ namespace Sufra.API.Controllers
 
         // =====================================================================
         /// <summary>
-        /// 🔍 جلب طالب عبر الرقم الجامعي (للأدمن فقط)
+        /// 🔍 جلب طالب عبر الرقم الجامعي (للأدمن أو الأونر)
         /// </summary>
         [Authorize(Roles = "admin,owner")]
         [HttpGet("university/{universityId}")]
@@ -116,7 +116,7 @@ namespace Sufra.API.Controllers
                 Email = dto.Email,
                 Phone = dto.Phone,
                 Password = hashedPassword,
-                Role = "student",
+                Role = "student", // 🔒 التسجيل العادي دائمًا طالب
                 Status = "active",
                 CreatedAt = DateTime.UtcNow
             };
@@ -141,6 +141,57 @@ namespace Sufra.API.Controllers
 
         // =====================================================================
         /// <summary>
+        /// 👑 إنشاء حساب جديد بواسطة الأونر (يتطلب صلاحية Owner)
+        /// </summary>
+        [Authorize(Roles = "owner")]
+        [HttpPost("create-by-owner")]
+        [ProducesResponseType(StatusCodes.Status201Created)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> CreateByOwner([FromBody] CreateStudentDto dto)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            bool exists = await _context.Students.AnyAsync(s => s.UniversityId == dto.UniversityId);
+            if (exists)
+                return Conflict(new { message = "❌ الرقم الجامعي مستخدم مسبقًا." });
+
+            var hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
+            var role = string.IsNullOrWhiteSpace(dto.Role) ? "student" : dto.Role.ToLower();
+
+            var user = new Domain.Entities.Student
+            {
+                UniversityId = dto.UniversityId,
+                Name = dto.Name,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Password = hashedPassword,
+                Role = role,
+                Status = "active",
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Students.Add(user);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("👑 الأونر أنشأ مستخدمًا جديدًا {Name} بدور {Role}", user.Name, user.Role);
+
+            return CreatedAtAction(nameof(GetByUniversityId),
+                new { universityId = user.UniversityId },
+                new
+                {
+                    user.Id,
+                    user.UniversityId,
+                    user.Name,
+                    user.Email,
+                    user.Role,
+                    message = $"✅ تم إنشاء {user.Role} بنجاح بواسطة الأونر"
+                });
+        }
+
+        // =====================================================================
+        /// <summary>
         /// 🔐 تسجيل الدخول عبر الرقم الجامعي وكلمة المرور
         /// </summary>
         [AllowAnonymous]
@@ -160,7 +211,7 @@ namespace Sufra.API.Controllers
             if (!valid)
                 return Unauthorized(new { message = "❌ كلمة المرور غير صحيحة." });
 
-            // ✅ توليد JWT Token للطالب
+            // ✅ توليد JWT Token
             var token = GenerateJwtToken(student);
 
             return Ok(new
@@ -178,7 +229,7 @@ namespace Sufra.API.Controllers
 
         // =====================================================================
         /// <summary>
-        /// ✏️ تحديث بيانات الطالب (للأدمن فقط)
+        /// ✏️ تحديث بيانات الطالب (للأدمن أو الأونر)
         /// </summary>
         [Authorize(Roles = "admin,owner")]
         [HttpPut("{id:int}")]
@@ -196,7 +247,7 @@ namespace Sufra.API.Controllers
 
         // =====================================================================
         /// <summary>
-        /// 🗑️ حذف طالب (للأدمن فقط)
+        /// 🗑️ حذف طالب (للأدمن أو الأونر)
         /// </summary>
         [Authorize(Roles = "admin,owner")]
         [HttpDelete("{id:int}")]
@@ -210,7 +261,7 @@ namespace Sufra.API.Controllers
         }
 
         // =====================================================================
-        // 🧠 توليد JWT Token للطالب
+        // 🧠 توليد JWT Token
         // =====================================================================
         private string GenerateJwtToken(Domain.Entities.Student student)
         {

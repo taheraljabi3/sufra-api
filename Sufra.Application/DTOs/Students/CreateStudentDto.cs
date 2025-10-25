@@ -31,9 +31,8 @@ namespace Sufra.Application.DTOs.Students
         public string Password { get; set; } = default!;
 
         /// <summary>
-        /// الدور الافتراضي للطالب (عادة Student).
+        /// 🎚️ الدور (student, courier, admin, owner)
         /// </summary>
-        public string? RoleName { get; set; } = "Student";
-        
+        public string? Role { get; set; } = "student";
     }
 }
