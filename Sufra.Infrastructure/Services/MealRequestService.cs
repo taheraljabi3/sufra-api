@@ -218,18 +218,19 @@ namespace Sufra.Application.Services
         {
             var entity = new MealRequest
             {
-                StudentId = dto.StudentId,
+                 StudentId = dto.StudentId,
                 SubscriptionId = dto.SubscriptionId,
                 ZoneId = dto.ZoneId,
                 Period = dto.Period,
                 DeliveryType = dto.DeliveryType,
                 LocationDetails = dto.LocationDetails,
                 Notes = dto.Notes,
-                Status = dto.Status ?? "queued",
+                Status = dto.Status,
                 IsPaid = dto.IsPaid,
-                MealDate = (dto.MealDate ?? DateTime.UtcNow).Date,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
+                MealDate = DateTime.SpecifyKind((dto.MealDate ?? DateTime.UtcNow).Date, DateTimeKind.Utc),
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
+                ReqTime = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Utc),
                 AssignedCourierId = dto.AssignedCourierId
             };
 
