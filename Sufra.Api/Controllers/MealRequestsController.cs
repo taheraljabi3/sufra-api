@@ -68,11 +68,49 @@ public async Task<IActionResult> CreateMealRequest([FromBody] CreateMealRequestF
         });
     }
 }
+// ============================================================
+// 🧱 إنشاء مجموعة وجبات دفعة واحدة (للأدمن فقط)
+// ============================================================
+[Authorize(Roles = "admin,owner")]
+[HttpPost("bulk-create")]
+public async Task<IActionResult> BulkCreateMealRequests([FromBody] List<CreateMealRequestFullDto> mealDtos)
+{
+    if (mealDtos == null || !mealDtos.Any())
+        return BadRequest(new { message = "⚠️ لا توجد بيانات لإضافتها." });
+
+    var createdList = new List<MealRequestDto>();
+
+    foreach (var dto in mealDtos)
+    {
+        var result = await _mealRequestService.CreateAsync(new MealRequestDto
+        {
+            StudentId = dto.StudentId,
+            SubscriptionId = dto.SubscriptionId,
+            ZoneId = dto.ZoneId,
+            Period = dto.Period,
+            DeliveryType = dto.DeliveryType,
+            LocationDetails = dto.LocationDetails,
+            Notes = dto.Notes,
+            Status = dto.Status,
+            IsPaid = dto.IsPaid,
+            MealDate = dto.MealDate,
+            AssignedCourierId = dto.AssignedCourierId
+        });
+
+        createdList.Add(result);
+    }
+
+    return Ok(new
+    {
+        message = $"✅ تم إنشاء {createdList.Count} وجبة بنجاح.",
+        data = createdList
+    });
+}
 
         // ============================================================
         // 🧾 جلب جميع الطلبات (للمشرف فقط)
         // ============================================================
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "admin,owner")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
