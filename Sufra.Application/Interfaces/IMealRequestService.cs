@@ -87,5 +87,8 @@ Task<MealRequestDto> CreateAsync(CreateMealRequestDto dto);
         /// بوجود طلب جديد في منطقتهم (قبل القبول).
         /// </summary>
         Task<MealRequestDto?> NotifyCouriersOnlyAsync(CreateMealRequestDto dto);
+
+        Task<MealRequestDto> CreateAsync(MealRequestDto dto);
+
     }
 }

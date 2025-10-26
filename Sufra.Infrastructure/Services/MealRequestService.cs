@@ -119,208 +119,192 @@ namespace Sufra.Application.Services
 
             return meal == null ? null : ToDto(meal);
         }
-public async Task<MealRequestDto> CreateAsync(CreateMealRequestDto dto)
-{
-    // 🗓️ تحديد تاريخ اليوم (بدون وقت)
-    var today = DateTime.UtcNow.Date;
 
-    // 🔍 منع التكرار: لا يُسمح بإنشاء أكثر من طلب لنفس الطالب والفترة في نفس اليوم
-    var existing = await _context.MealRequests
-        .FirstOrDefaultAsync(m =>
-            m.StudentId == dto.StudentId &&
-            m.Period == dto.Period &&
-            m.MealDate == today);
-
-    if (existing != null)
-    {
-        _logger.LogWarning("⚠️ يوجد طلب مسبق لنفس الطالب ({StudentId}) والفترة ({Period}) في اليوم ({Date}).",
-            dto.StudentId, dto.Period, today.ToString("yyyy-MM-dd"));
-        throw new InvalidOperationException($"يوجد طلب سابق لهذه الفترة ({existing.Status}).");
-    }
-
-    // 🧭 تحديد المنطقة تلقائيًا من السكن إذا لم تُرسل
-    int zoneId = dto.ZoneId;
-    if (zoneId == 0)
-    {
-        var housing = await _context.Set<StudentHousing>()
-            .FirstOrDefaultAsync(h => h.StudentId == dto.StudentId);
-        if (housing != null)
-        {
-            zoneId = housing.ZoneId;
-            _logger.LogInformation("📍 تم جلب ZoneId تلقائيًا من السكن: {ZoneId}", zoneId);
-        }
-        else
-        {
-            _logger.LogWarning("⚠️ لم يتم العثور على بيانات السكن للطالب {StudentId}.", dto.StudentId);
-        }
-    }
-
-    // 🍱 إنشاء الطلب الجديد
-    var mealRequest = new MealRequest
-    {
-        StudentId = dto.StudentId,
-        ZoneId = zoneId,
-        SubscriptionId = dto.SubscriptionId ?? 0,
-        Period = dto.Period,
-        DeliveryType = dto.DeliveryType ?? "استلام ذاتي",
-        LocationDetails = dto.LocationDetails,
-        Notes = dto.Notes,
-        Status = dto.DeliveryType == "توصيل" ? "waiting_for_courier" : "queued",
-        MealDate = today,
-        CreatedAt = DateTime.UtcNow,
-        IsPaid = true
-    };
-
-    _context.MealRequests.Add(mealRequest);
-    await _context.SaveChangesAsync();
-
-    _logger.LogInformation("✅ تم إنشاء الطلب الجديد بالمعرّف {Id} للطالب {StudentId} ({Period})",
-        mealRequest.Id, mealRequest.StudentId, mealRequest.Period);
-
-    // 🚴‍♂️ إشعار المندوبين في نفس المنطقة إذا كان توصيل
-    if (dto.DeliveryType == "توصيل")
-    {
-        var couriers = await _context.Couriers
-            .Include(c => c.Student)
-            .Where(c => c.ZoneId == mealRequest.ZoneId && c.Student.Status == "active")
-            .ToListAsync();
-
-        if (couriers.Any())
-        {
-            var notifications = couriers.Select(c => new NotificationDto
-            {
-                UserId = c.StudentId,
-                Role = "courier",
-                Title = "📦 طلب جديد في منطقتك",
-                Message = $"الطالب #{dto.StudentId} طلب وجبة {dto.Period} جديدة في منطقتك، بانتظار القبول.",
-                RelatedRequestId = mealRequest.Id
-            }).ToList();
-
-            await _notificationService.CreateManyAsync(notifications);
-
-            _logger.LogInformation("✅ تم إشعار {Count} مندوبيْن في المنطقة {ZoneId}.",
-                couriers.Count, mealRequest.ZoneId);
-        }
-        else
-        {
-            _logger.LogWarning("⚠️ لا يوجد مندوبين نشطين في المنطقة (ZoneId={ZoneId})", mealRequest.ZoneId);
-        }
-    }
-
-    // ✅ إرجاع الطلب الجديد
-    return new MealRequestDto
-    {
-        Id = mealRequest.Id,
-        StudentId = mealRequest.StudentId,
-        ZoneId = mealRequest.ZoneId,
-        SubscriptionId = mealRequest.SubscriptionId,
-        Period = mealRequest.Period,
-        DeliveryType = mealRequest.DeliveryType,
-        LocationDetails = mealRequest.LocationDetails,
-        Notes = mealRequest.Notes,
-        Status = mealRequest.Status,
-        MealDate = mealRequest.MealDate,
-        CreatedAt = mealRequest.CreatedAt,
-        IsPaid = mealRequest.IsPaid
-    };
-}
-
-// ============================================================
-// 📢 تحديث الطلب الحالي + إشعار المندوبين في نفس المنطقة
-// ============================================================
-public async Task<MealRequestDto?> NotifyCouriersOnlyAsync(CreateMealRequestDto dto)
-{
-    var today = DateTime.UtcNow.Date;
-
-    // 🔍 1️⃣ البحث عن الطلب الحالي للطالب في نفس اليوم والفترة
-    var existing = await _context.MealRequests
-        .Include(m => m.Student)
-        .Include(m => m.Zone)
-        .FirstOrDefaultAsync(m =>
-            m.StudentId == dto.StudentId &&
-            m.Period == dto.Period &&
-            m.MealDate.Date == today);
-
-    if (existing == null)
-    {
-        _logger.LogWarning("⚠️ لم يتم العثور على طلب للطالب {StudentId} في الفترة {Period} بتاريخ {Date}.",
-            dto.StudentId, dto.Period, today.ToString("yyyy-MM-dd"));
-        return null;
-    }
-
-    // 🟡 2️⃣ تحديث الحالة إلى 'queued' إذا لم تكن كذلك
-    if (existing.Status != "queued")
-    {
-        existing.Status = "queued";
-        existing.UpdatedAt = DateTime.UtcNow;
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("✅ تم تحديث حالة الطلب {Id} للطالب {StudentId} إلى 'queued'.",
-            existing.Id, existing.StudentId);
-    }
-    else
-    {
-        _logger.LogInformation("ℹ️ الطلب {Id} للطالب {StudentId} هو بالفعل في حالة 'queued'.",
-            existing.Id, existing.StudentId);
-    }
-
-    // 🚴‍♂️ 3️⃣ جلب المندوبين في نفس المنطقة
-    var couriers = await _context.Couriers
-        .Include(c => c.Student)
-        .Where(c => c.ZoneId == existing.ZoneId && c.Student.Status == "active")
-        .ToListAsync();
-
-    if (couriers.Any())
-    {
-        // 🔔 4️⃣ إنشاء الإشعارات للمندوبين
-        var notifications = couriers.Select(c => new NotificationDto
-        {
-            UserId = c.StudentId,
-            Role = "courier",
-            Title = "📦 طلب توصيل جديد في منطقتك",
-            Message = $"الطالب {existing.Student?.Name ?? "مجهول"} طلب وجبة {existing.Period} بانتظار القبول.",
-            RelatedRequestId = existing.Id
-        }).ToList();
-
-        await _notificationService.CreateManyAsync(notifications);
-
-        _logger.LogInformation("✅ تم إشعار {Count} مندوبيْن في المنطقة {ZoneId} بخصوص الطلب {RequestId}.",
-            couriers.Count, existing.ZoneId, existing.Id);
-    }
-    else
-    {
-        _logger.LogWarning("⚠️ لا يوجد مندوبين نشطين في المنطقة (ZoneId={ZoneId}).", existing.ZoneId);
-    }
-
-    // 📢 5️⃣ إشعار الطالب بأن طلبه أُرسل
-    await _notificationService.CreateAsync(new NotificationDto
-    {
-        UserId = existing.StudentId,
-        Role = "student",
-        Title = "✅ تم إرسال طلبك",
-        Message = $"تم إرسال طلب {existing.Period} إلى المندوبين في منطقتك بانتظار قبول أحدهم.",
-        RelatedRequestId = existing.Id
-    });
-
-    // 🧩 6️⃣ إرجاع بيانات الطلب بعد التحديث
-    return new MealRequestDto
-    {
-        Id = existing.Id,
-        StudentId = existing.StudentId,
-        ZoneId = existing.ZoneId,
-        Period = existing.Period,
-        DeliveryType = existing.DeliveryType,
-        LocationDetails = existing.LocationDetails,
-        Notes = existing.Notes,
-        Status = existing.Status,
-        MealDate = existing.MealDate,
-        CreatedAt = existing.CreatedAt,
-        UpdatedAt = existing.UpdatedAt,
-        IsPaid = existing.IsPaid
-    };
-}
         // ============================================================
-        // 🚴‍♂️ قبول الطلب من أحد المندوبين
+        // 🍱 إنشاء الطلب (للطلاب - عبر الإشعار)
+        // ============================================================
+        public async Task<MealRequestDto> CreateAsync(CreateMealRequestDto dto)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            // منع التكرار لنفس اليوم والفترة
+            var existing = await _context.MealRequests
+                .FirstOrDefaultAsync(m =>
+                    m.StudentId == dto.StudentId &&
+                    m.Period == dto.Period &&
+                    m.MealDate == today);
+
+            if (existing != null)
+            {
+                _logger.LogWarning("⚠️ يوجد طلب مسبق لنفس الطالب ({StudentId}) والفترة ({Period}) في اليوم ({Date}).",
+                    dto.StudentId, dto.Period, today.ToString("yyyy-MM-dd"));
+                throw new InvalidOperationException($"يوجد طلب سابق لهذه الفترة ({existing.Status}).");
+            }
+
+            int zoneId = dto.ZoneId;
+            if (zoneId == 0)
+            {
+                var housing = await _context.Set<StudentHousing>()
+                    .FirstOrDefaultAsync(h => h.StudentId == dto.StudentId);
+                if (housing != null)
+                {
+                    zoneId = housing.ZoneId;
+                    _logger.LogInformation("📍 تم جلب ZoneId تلقائيًا من السكن: {ZoneId}", zoneId);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ لم يتم العثور على بيانات السكن للطالب {StudentId}.", dto.StudentId);
+                }
+            }
+
+            var mealRequest = new MealRequest
+            {
+                StudentId = dto.StudentId,
+                ZoneId = zoneId,
+                SubscriptionId = dto.SubscriptionId ?? 0,
+                Period = dto.Period,
+                DeliveryType = dto.DeliveryType ?? "استلام ذاتي",
+                LocationDetails = dto.LocationDetails,
+                Notes = dto.Notes,
+                Status = dto.DeliveryType == "توصيل" ? "waiting_for_courier" : "queued",
+                MealDate = today,
+                CreatedAt = DateTime.UtcNow,
+                IsPaid = true
+            };
+
+            _context.MealRequests.Add(mealRequest);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("✅ تم إنشاء الطلب الجديد بالمعرّف {Id} للطالب {StudentId} ({Period})",
+                mealRequest.Id, mealRequest.StudentId, mealRequest.Period);
+
+            // إشعار المندوبين
+            if (dto.DeliveryType == "توصيل")
+            {
+                var couriers = await _context.Couriers
+                    .Include(c => c.Student)
+                    .Where(c => c.ZoneId == mealRequest.ZoneId && c.Student.Status == "active")
+                    .ToListAsync();
+
+                if (couriers.Any())
+                {
+                    var notifications = couriers.Select(c => new NotificationDto
+                    {
+                        UserId = c.StudentId,
+                        Role = "courier",
+                        Title = "📦 طلب جديد في منطقتك",
+                        Message = $"الطالب #{dto.StudentId} طلب وجبة {dto.Period} جديدة في منطقتك، بانتظار القبول.",
+                        RelatedRequestId = mealRequest.Id
+                    }).ToList();
+
+                    await _notificationService.CreateManyAsync(notifications);
+
+                    _logger.LogInformation("✅ تم إشعار {Count} مندوبيْن في المنطقة {ZoneId}.",
+                        couriers.Count, mealRequest.ZoneId);
+                }
+                else
+                {
+                    _logger.LogWarning("⚠️ لا يوجد مندوبين نشطين في المنطقة (ZoneId={ZoneId})", mealRequest.ZoneId);
+                }
+            }
+
+            return ToDto(mealRequest);
+        }
+
+        // ============================================================
+        // 🏗️ إنشاء وجبة كاملة (للأدمن)
+        // ============================================================
+        public async Task<MealRequestDto> CreateAsync(MealRequestDto dto)
+        {
+            var entity = new MealRequest
+            {
+                StudentId = dto.StudentId,
+                SubscriptionId = dto.SubscriptionId,
+                ZoneId = dto.ZoneId,
+                Period = dto.Period,
+                DeliveryType = dto.DeliveryType,
+                LocationDetails = dto.LocationDetails,
+                Notes = dto.Notes,
+                Status = dto.Status ?? "queued",
+                IsPaid = dto.IsPaid,
+                MealDate = (dto.MealDate ?? DateTime.UtcNow).Date,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow,
+                AssignedCourierId = dto.AssignedCourierId
+            };
+
+            _context.MealRequests.Add(entity);
+            await _context.SaveChangesAsync();
+
+            dto.Id = entity.Id;
+            return dto;
+        }
+
+        // ============================================================
+        // 📢 تحديث الطلب الحالي + إشعار المندوبين
+        // ============================================================
+        public async Task<MealRequestDto?> NotifyCouriersOnlyAsync(CreateMealRequestDto dto)
+        {
+            var today = DateTime.UtcNow.Date;
+
+            var existing = await _context.MealRequests
+                .Include(m => m.Student)
+                .Include(m => m.Zone)
+                .FirstOrDefaultAsync(m =>
+                    m.StudentId == dto.StudentId &&
+                    m.Period == dto.Period &&
+                    m.MealDate.Date == today);
+
+            if (existing == null)
+            {
+                _logger.LogWarning("⚠️ لم يتم العثور على طلب للطالب {StudentId} في الفترة {Period} بتاريخ {Date}.",
+                    dto.StudentId, dto.Period, today.ToString("yyyy-MM-dd"));
+                return null;
+            }
+
+            if (existing.Status != "queued")
+            {
+                existing.Status = "queued";
+                existing.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("✅ تم تحديث حالة الطلب {Id} للطالب {StudentId} إلى 'queued'.",
+                    existing.Id, existing.StudentId);
+            }
+
+            var couriers = await _context.Couriers
+                .Include(c => c.Student)
+                .Where(c => c.ZoneId == existing.ZoneId && c.Student.Status == "active")
+                .ToListAsync();
+
+            if (couriers.Any())
+            {
+                var notifications = couriers.Select(c => new NotificationDto
+                {
+                    UserId = c.StudentId,
+                    Role = "courier",
+                    Title = "📦 طلب توصيل جديد في منطقتك",
+                    Message = $"الطالب {existing.Student?.Name ?? "مجهول"} طلب وجبة {existing.Period} بانتظار القبول.",
+                    RelatedRequestId = existing.Id
+                }).ToList();
+
+                await _notificationService.CreateManyAsync(notifications);
+            }
+
+            await _notificationService.CreateAsync(new NotificationDto
+            {
+                UserId = existing.StudentId,
+                Role = "student",
+                Title = "✅ تم إرسال طلبك",
+                Message = $"تم إرسال طلب {existing.Period} إلى المندوبين في منطقتك بانتظار قبول أحدهم.",
+                RelatedRequestId = existing.Id
+            });
+
+            return ToDto(existing);
+        }
+
+        // ============================================================
+        // 🚴‍♂️ قبول الطلب من المندوب
         // ============================================================
         public async Task<(bool Success, string Message, int StudentId)> AssignCourierAsync(int requestId, int courierId)
         {
