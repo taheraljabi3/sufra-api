@@ -68,44 +68,6 @@ public async Task<IActionResult> CreateMealRequest([FromBody] CreateMealRequestF
         });
     }
 }
-// ============================================================
-// 🧱 إنشاء مجموعة وجبات دفعة واحدة (للأدمن فقط)
-// ============================================================
-[Authorize(Roles = "admin,owner")]
-[HttpPost("bulk-create")]
-public async Task<IActionResult> BulkCreateMealRequests([FromBody] List<CreateMealRequestFullDto> mealDtos)
-{
-    if (mealDtos == null || !mealDtos.Any())
-        return BadRequest(new { message = "⚠️ لا توجد بيانات لإضافتها." });
-
-    var createdList = new List<MealRequestDto>();
-
-    foreach (var dto in mealDtos)
-    {
-        var result = await _mealRequestService.CreateAsync(new MealRequestDto
-        {
-            StudentId = dto.StudentId,
-            SubscriptionId = dto.SubscriptionId,
-            ZoneId = dto.ZoneId,
-            Period = dto.Period,
-            DeliveryType = dto.DeliveryType,
-            LocationDetails = dto.LocationDetails,
-            Notes = dto.Notes,
-            Status = dto.Status,
-            IsPaid = dto.IsPaid,
-            MealDate = dto.MealDate,
-            AssignedCourierId = dto.AssignedCourierId
-        });
-
-        createdList.Add(result);
-    }
-
-    return Ok(new
-    {
-        message = $"✅ تم إنشاء {createdList.Count} وجبة بنجاح.",
-        data = createdList
-    });
-}
 
         // ============================================================
         // 🧾 جلب جميع الطلبات (للمشرف فقط)
@@ -142,7 +104,7 @@ public async Task<IActionResult> BulkCreateMealRequests([FromBody] List<CreateMe
         // ============================================================
         // 🚴‍♂️ جلب الطلبات حسب المندوب (مفتوح للمندوبين فقط)
         // ============================================================
-        [Authorize(Roles = "Courier,Admin")]
+        [Authorize(Roles = "courier,admin")]
         [HttpGet("courier/{courierId}")]
         public async Task<IActionResult> GetByCourier(int courierId)
         {
@@ -190,7 +152,7 @@ public async Task<IActionResult> BulkCreateMealRequests([FromBody] List<CreateMe
         // ============================================================
         // 📢 تحديث حالة الطلب الحالي وإرسال إشعارات للمندوبين في نفس المنطقة
         // ============================================================
-        [Authorize(Roles = "Student,Admin")] // الطالب هو من يرسل الطلب غالبًا
+        [Authorize(Roles = "student,admin,owner")] // الطالب هو من يرسل الطلب غالبًا
         [HttpPost("notify")]
         public async Task<IActionResult> NotifyCouriers([FromBody] CreateMealRequestDto dto)
         {
@@ -225,7 +187,7 @@ public async Task<IActionResult> BulkCreateMealRequests([FromBody] List<CreateMe
         // ============================================================
         // 🚴‍♂️ قبول الطلب من أحد المندوبين
         // ============================================================
-        [Authorize(Roles = "Courier,Admin")]
+        [Authorize(Roles = "courier,admin,owner")]
         [HttpPut("{requestId:int}/accept/{courierId:int}")]
         public async Task<IActionResult> AcceptRequest(int requestId, int courierId)
         {

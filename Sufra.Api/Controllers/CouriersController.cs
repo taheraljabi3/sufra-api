@@ -23,7 +23,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>📋 جلب جميع المندوبين (للأدمن والمالك فقط)</summary>
         // ============================================================
-        [Authorize(Roles = "Admin,Owner")]
+        [Authorize(Roles = "admin,owner")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -50,7 +50,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>🔍 جلب مندوب معين عبر المعرّف</summary>
         // ============================================================
-        [Authorize(Roles = "Admin,Owner,Courier")]
+        [Authorize(Roles = "admin,owner,courier")]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -72,7 +72,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>📍 جلب المندوبين حسب المنطقة (للأدمن والمالك فقط)</summary>
         // ============================================================
-        [Authorize(Roles = "Admin,Owner")]
+        [Authorize(Roles = "admin,owner")]
         [HttpGet("zone/{zoneId:int}")]
         public async Task<IActionResult> GetByZone(int zoneId)
         {
@@ -99,7 +99,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>➕ إنشاء مندوب جديد (للمالك فقط)</summary>
         // ============================================================
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "owner")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateCourierDto dto)
         {
@@ -126,7 +126,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>🔄 تحديث حالة المندوب (نشط / غير نشط) — للأدمن أو المالك فقط</summary>
         // ============================================================
-        [Authorize(Roles = "Admin,Owner")]
+        [Authorize(Roles = "admin,owner")]
         [HttpPut("{id:int}/status")]
         public async Task<IActionResult> UpdateStatus(int id, [FromQuery] string status)
         {

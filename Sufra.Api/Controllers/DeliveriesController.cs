@@ -23,7 +23,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>🚴‍♂️ جلب جميع المهام الخاصة بالمندوب الحالي (من التوكن)</summary>
         // ============================================================
-        [Authorize(Roles = "Courier,Admin,Owner")]
+        [Authorize(Roles = "courier,admin,owner")]
         [HttpGet("courier")]
         public async Task<IActionResult> GetByCurrentCourier()
         {
@@ -67,7 +67,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>📦 تأكيد تسليم الطلب من قبل المندوب</summary>
         // ============================================================
-        [Authorize(Roles = "Courier,Admin,Owner")]
+        [Authorize(Roles = "courier,admin,owner")]
         [HttpPost("confirm")]
         public async Task<IActionResult> Confirm([FromBody] CreateDeliveryProofDto dto)
         {
@@ -103,7 +103,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>🧭 (للأدمن أو المالك) جلب جميع عمليات التوصيل</summary>
         // ============================================================
-        [Authorize(Roles = "Admin,Owner")]
+        [Authorize(Roles = "admin,owner")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {

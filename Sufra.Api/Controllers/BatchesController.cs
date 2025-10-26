@@ -23,7 +23,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>📋 جلب جميع الدُفعات (Batches) — للمالك أو الأدمن فقط</summary>
         // ============================================================
-        [Authorize(Roles = "Admin,Owner")]
+        [Authorize(Roles = "admin,owner")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -50,7 +50,7 @@ namespace Sufra.API.Controllers
         // ============================================================
         /// <summary>➕ إنشاء دفعة جديدة (Batch) — للمالك فقط</summary>
         // ============================================================
-        [Authorize(Roles = "Owner")]
+        [Authorize(Roles = "owner")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateBatchDto dto)
         {
