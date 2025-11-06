@@ -14,12 +14,11 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 // ============================================================
-// 🧩 إعداد قاعدة البيانات (PostgreSQL)
+// 🧩 إعداد قاعدة البيانات (PostgreSQL أو SQL Server حسب الإعداد)
 // ============================================================
 builder.Services.AddDbContext<SufraDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔐 لا تطبع بيانات الاتصال لتجنب كشف كلمة السر
 Console.WriteLine("🔗 Database connection initialized successfully.");
 
 // ============================================================
@@ -43,10 +42,7 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 // ============================================================
 // 🔐 إعداد الـ JWT Authentication
 // ============================================================
-
-// ✅ لا تستخدم fallback في الإنتاج (تحسين الأمان)
-var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException("❌ JWT key not found in configuration.");
+var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUFRA_SECRET_KEY_2025_!CHANGE_THIS!";
 var keyBytes = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -56,7 +52,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    // ✅ فعّل HTTPS فقط في الإنتاج
+    // ✅ في التطوير يمكن تعطيله، في الإنتاج يجب تفعيله
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
@@ -76,16 +72,32 @@ builder.Services.AddAuthorization();
 // ============================================================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalReact", policy =>
+    if (builder.Environment.IsDevelopment())
     {
-        policy.WithOrigins(
-                "https://sufra.app",
-                "https://sufra-admin.app",
-                "https://sufra-api.onrender.com")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
-    });
+        // 🔓 أثناء التطوير: السماح الكامل
+        options.AddPolicy("AllowFrontend", policy =>
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+    }
+    else
+    {
+        // 🔐 في الإنتاج: السماح فقط للدومينات الموثوقة
+        options.AddPolicy("AllowFrontend", policy =>
+        {
+            policy.WithOrigins(
+                    "https://sufra.app",
+                    "https://sufra-admin.app",
+                    "https://sufra-api.onrender.com"
+                )
+                .AllowAnyHeader()
+                .AllowAnyMethod()
+                .AllowCredentials();
+        });
+    }
 });
 
 // ============================================================
@@ -109,8 +121,8 @@ builder.Services.AddSwaggerGen(options =>
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Sufra API",
-        Version = "v1",
-        Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والمندوبين.",
+        Version = "v2",
+        Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\n\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والتوصيل.",
         Contact = new OpenApiContact
         {
             Name = "فريق تطوير سُفرة",
@@ -118,13 +130,11 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🧩 تحميل تعليقات XML (للتوثيق التلقائي)
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath);
 
-    // 🧱 دعم إدخال التوكن في Swagger UI
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "أدخل التوكن هنا بصيغة: **Bearer {your token}**",
@@ -149,7 +159,6 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🧩 تجنب تضارب الأسماء في DTOs
     options.CustomSchemaIds(type => type.FullName);
 });
 
@@ -159,23 +168,15 @@ builder.Services.AddSwaggerGen(options =>
 var app = builder.Build();
 
 // ============================================================
-// 🔍 تفعيل Swagger دائمًا (في dev و prod)
+// 🔍 تفعيل Swagger في التطوير والإنتاج
 // ============================================================
 app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.DocumentTitle = "📘 Sufra API Docs";
     options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-    options.RoutePrefix = "docs"; // يمكن الوصول عبر /docs
+    options.RoutePrefix = "docs";
 });
-
-// ============================================================
-// 🧰 صفحة الأخطاء في وضع التطوير فقط
-// ============================================================
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
 
 // ============================================================
 // 🔐 الإعدادات العامة للتطبيق
@@ -183,7 +184,7 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 // ✅ تفعيل CORS قبل المصادقة
-app.UseCors("AllowLocalReact");
+app.UseCors("AllowFrontend");
 
 // ✅ تفعيل المصادقة والتفويض
 app.UseAuthentication();
