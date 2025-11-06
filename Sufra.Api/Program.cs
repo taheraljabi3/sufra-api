@@ -84,10 +84,10 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new OpenApiInfo
+    options.SwaggerDoc("v2", new OpenApiInfo
     {
         Title = "Sufra API",
-        Version = "v1",
+        Version = "v2",
         Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والمندوبين.",
         Contact = new OpenApiContact
         {
@@ -180,4 +180,5 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
 
