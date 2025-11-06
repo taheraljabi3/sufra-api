@@ -91,7 +91,8 @@ builder.Services.AddCors(options =>
             policy.WithOrigins(
                     "https://sufra.app",
                     "https://sufra-admin.app",
-                    "https://sufra-api.onrender.com"
+                    "https://sufra-api.onrender.com",
+                    "http://localhost:5173"
                 )
                 .AllowAnyHeader()
                 .AllowAnyMethod()
@@ -208,3 +209,4 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
