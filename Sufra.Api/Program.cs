@@ -92,7 +92,7 @@ builder.Services.AddSwaggerGen(options =>
         Contact = new OpenApiContact
         {
             Name = "فريق تطوير سُفرة",
-            Email = "support@sufra.sa"
+            Email = "taheraljabi3@gmail.com"
         }
     });
 
@@ -180,3 +180,4 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
