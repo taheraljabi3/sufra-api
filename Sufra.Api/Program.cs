@@ -143,7 +143,7 @@ app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.DocumentTitle = "📘 Sufra API Docs";
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
+    options.SwaggerEndpoint("/swagger/v2/swagger.json", "Sufra API v2");
     options.RoutePrefix = "docs"; // ✅ يمكن الوصول من /docs
 });
 
@@ -180,5 +180,6 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
+
 
 
