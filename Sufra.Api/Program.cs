@@ -56,12 +56,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-<<<<<<< Updated upstream
     // ✅ فعّل HTTPS فقط في الإنتاج
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
-=======
-    options.RequireHttpsMetadata = false; // في التطوير يمكن تعطيله
->>>>>>> Stashed changes
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -80,14 +76,16 @@ builder.Services.AddAuthorization();
 // ============================================================
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowLocalReact",
-        policy =>
-        {
-            policy.WithOrigins("https://sufra-api.onrender.com/", "https://sufra-api.onrender.com/")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        });
+    options.AddPolicy("AllowLocalReact", policy =>
+    {
+        policy.WithOrigins(
+                "https://sufra.app",
+                "https://sufra-admin.app",
+                "https://sufra-api.onrender.com")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
 
 // ============================================================
@@ -163,16 +161,13 @@ var app = builder.Build();
 // ============================================================
 // 🔍 تفعيل Swagger دائمًا (في dev و prod)
 // ============================================================
-if (app.Environment.IsDevelopment())
+app.UseSwagger();
+app.UseSwaggerUI(options =>
 {
-    app.UseSwagger();
-    app.UseSwaggerUI(options =>
-    {
-        options.DocumentTitle = "📘 Sufra API Docs";
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-        options.RoutePrefix = "docs"; // يمكن الوصول عبر /docs
-    });
-}
+    options.DocumentTitle = "📘 Sufra API Docs";
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
+    options.RoutePrefix = "docs"; // يمكن الوصول عبر /docs
+});
 
 // ============================================================
 // 🧰 صفحة الأخطاء في وضع التطوير فقط
@@ -187,19 +182,8 @@ if (app.Environment.IsDevelopment())
 // ============================================================
 app.UseHttpsRedirection();
 
-<<<<<<< Updated upstream
-// ✅ السماح للـ Frontend بالوصول من نطاقات محددة (بدلاً من AllowAnyOrigin)
-app.UseCors(policy =>
-    policy.WithOrigins(
-        "https://sufra.app",
-        "https://sufra-admin.app"
-    )
-    .AllowAnyMethod()
-    .AllowAnyHeader());
-=======
 // ✅ تفعيل CORS قبل المصادقة
 app.UseCors("AllowLocalReact");
->>>>>>> Stashed changes
 
 // ✅ تفعيل المصادقة والتفويض
 app.UseAuthentication();
