@@ -17,9 +17,10 @@ namespace Sufra.Domain.Entities
         public string Status { get; set; } = "pending"; // pending | delivering | delivered | failed
         public string? Notes { get; set; }
         public string? EvidenceUrl { get; set; }
-
+        // public Zone Zone { get; set; }
 
         // 🔹 حالة تحقق المشرف
         public bool IsVerified { get; set; } = false;
+        
     }
 }

@@ -19,75 +19,100 @@ namespace Sufra.Infrastructure.Services
             _context = context;
             _mapper = mapper;
         }
+public async Task<IEnumerable<DeliveryProofDto>> GetByCourierAsync(int courierId)
+{
+    // ✅ جلب بيانات المندوب
+    var courier = await _context.Couriers
+        .Include(c => c.Student)
+        .FirstOrDefaultAsync(c => c.Id == courierId);
 
-        // ============================================================
-        // 🟦 1️⃣ جلب جميع مهام المندوب حسب المعرّف
-        // ============================================================
-        public async Task<IEnumerable<DeliveryProofDto>> GetByCourierAsync(int courierId)
+    if (courier == null)
+        throw new InvalidOperationException("❌ المندوب غير موجود.");
+
+    if (courier.ZoneId == 0)
+        throw new InvalidOperationException("⚠️ لم يتم تحديد منطقة لهذا المندوب.");
+
+    // ✅ جلب الطلبات الخاصة بمنطقة المندوب ونوع "توصيل"
+    var requests = await _context.MealRequests
+        .Include(r => r.Student)
+        .Include(r => r.Zone)
+        .Where(r => r.ZoneId == courier.ZoneId && r.DeliveryType == "توصيل")
+        .OrderByDescending(r => r.CreatedAt)
+        .ToListAsync();
+
+    // ✅ جلب بيانات السكن لكل طالب
+    var studentIds = requests.Select(r => r.StudentId).Distinct().ToList();
+    var housings = await _context.StudentHousings
+        .Where(h => studentIds.Contains(h.StudentId) && h.IsCurrent)
+        .ToListAsync();
+
+    // 🧠 الدمج الذكي بين الطلبات والسكن
+    var result = requests.Select(r =>
+    {
+        var housing = housings.FirstOrDefault(h => h.StudentId == r.StudentId);
+
+        return new DeliveryProofDto
         {
-            // 1️⃣ احصل على منطقة المندوب
-            var courierZoneId = await _context.Couriers
-                .Where(c => c.Id == courierId)
-                .Select(c => c.ZoneId)
-                .FirstOrDefaultAsync();
+            Id = r.Id,
+            MealRequestId = r.Id,
+            CourierId = courier.Id,
+            CourierName = courier.Student?.Name ?? "—",
+            StudentName = r.Student?.Name ?? "غير معروف",
+            ZoneName = housing?.ZoneName ?? r.Zone?.Name ?? "—",
+            RoomNo = housing?.RoomNo ?? "—",
+            Notes = $"📦 مهمة من المنطقة {(housing?.ZoneName ?? r.Zone?.Name ?? "غير محددة")} - الغرفة {(housing?.RoomNo ?? "—")}",
+            Status = r.Status,
+            DeliveredAt = null
+        };
+    }).ToList();
 
-            if (courierZoneId == 0)
-                throw new InvalidOperationException("⚠️ لم يتم تحديد منطقة لهذا المندوب.");
+    return result;
+}
+// ============================================================
+// 🟧 2️⃣ جلب جميع عمليات التوصيل (للأدمن) مع السكن
+// ============================================================
+public async Task<IEnumerable<DeliveryProofDto>> GetAllAsync()
+{
+    var deliveries = await _context.DeliveryProofs
+        .Include(d => d.MealRequest)
+            .ThenInclude(r => r.Student)
+        .Include(d => d.MealRequest.Zone)
+        .Include(d => d.Courier)
+        .OrderByDescending(d => d.DeliveredAt)
+        .ToListAsync();
 
-            // 2️⃣ جلب جميع الطلبات ضمن نفس المنطقة من نوع توصيل ولم تُسلَّم بعد
-            var requests = await _context.MealRequests
-                .Include(r => r.Subscription)
-                .Include(r => r.Zone)
-                .Where(r => r.ZoneId == courierZoneId
-                            && r.DeliveryType == "توصيل"
-                            && r.Status != "تم التسليم"
-                            && r.Status != "ملغى")
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+    // 🏠 جلب بيانات السكن الحالية لجميع الطلبة في عمليات التوصيل
+    var studentIds = deliveries
+        .Where(d => d.MealRequest != null)
+        .Select(d => d.MealRequest.StudentId)
+        .Distinct()
+        .ToList();
 
-            // 3️⃣ تحويل الطلبات إلى DeliveryProofDto لعرضها كمهام للمندوب
-            var tasks = requests.Select(r => new DeliveryProofDto
-            {
-                MealRequestId = r.Id,
-                CourierId = courierId,
-                Status = r.Status,
-                // ❌ حذف DeliveredAt = null (القيمة الافتراضية تكفي)
-                Notes = $"📦 مهمة منطقية من المنطقة {r.Zone?.Name ?? r.ZoneId.ToString()}",
-                // ❌ لا يوجد MealRequest في DTO، لذا نضيف التفاصيل في حقل جديد
-            }).ToList();
+    var housings = await _context.StudentHousings
+        .Where(h => studentIds.Contains(h.StudentId) && h.IsCurrent)
+        .ToListAsync();
 
-            return tasks;
-        }
-        public async Task<IEnumerable<CourierDto>> GetCouriersByZoneAsync(int zoneId)
+    // 🔁 دمج البيانات مع السكن
+    var result = deliveries.Select(d =>
+    {
+        var housing = housings.FirstOrDefault(h => h.StudentId == d.MealRequest.StudentId);
+        return new DeliveryProofDto
         {
-            return await _context.Couriers
-                .Include(c => c.Student)
-                .Where(c => c.ZoneId == zoneId)
-                .Select(c => new CourierDto
-                {
-                    Id = c.Id,
-                    Name = c.Student.Name,              // 🔹 اسم المندوب من الطالب
-                    Phone = c.Student.Phone ?? "—",     // 🔹 رقم الجوال من الطالب
-                    ZoneId = c.ZoneId
-                })
-                .ToListAsync();
-        }
+            Id = d.Id,
+            MealRequestId = d.MealRequestId,
+            CourierId = d.CourierId,
+            CourierName = d.Courier?.Student?.Name ?? "—",
+            StudentName = d.MealRequest?.Student?.Name ?? "غير معروف",
+            ZoneName = d.MealRequest?.Zone?.Name ?? housing?.ZoneName ?? "—",
+            RoomNo = housing?.RoomNo ?? "—",
+            Notes = d.Notes,
+            Status = d.MealRequest?.Status ?? "—",
+            DeliveredAt = d.DeliveredAt
+        };
+    }).ToList();
 
-        // ============================================================
-        // 🟧 2️⃣ جلب جميع عمليات التوصيل (للأدمن)
-        // ============================================================
-        public async Task<IEnumerable<DeliveryProofDto>> GetAllAsync()
-        {
-            var deliveries = await _context.DeliveryProofs
-                .Include(d => d.MealRequest)
-                    .ThenInclude(r => r.Subscription)
-                .Include(d => d.MealRequest.Zone)
-                .Include(d => d.Courier)
-                .OrderByDescending(d => d.DeliveredAt)
-                .ToListAsync();
-
-            return _mapper.Map<IEnumerable<DeliveryProofDto>>(deliveries);
-        }
+    return result;
+}
 
         // ============================================================
         // 🟩 3️⃣ تأكيد عملية التسليم من المندوب
@@ -166,6 +191,26 @@ namespace Sufra.Infrastructure.Services
 
             _context.DeliveryProofs.Add(delivery);
             await _context.SaveChangesAsync();
+        }
+
+        // ============================================================
+        // 🟦 5️⃣ جلب المندوبين المرتبطين بمنطقة معينة (Zone)
+        // ============================================================
+        public async Task<IEnumerable<CourierDto>> GetCouriersByZoneAsync(int zoneId)
+        {
+            var couriers = await _context.Couriers
+                .Include(c => c.Student)
+                .Where(c => c.ZoneId == zoneId)
+                .Select(c => new CourierDto
+                {
+                    Id = c.Id,
+                    Name = c.Student.Name,
+                    Phone = c.Student.Phone ?? "—",
+                    ZoneId = c.ZoneId
+                })
+                .ToListAsync();
+
+            return couriers;
         }
     }
 }

@@ -25,6 +25,15 @@ namespace Sufra.Domain.Entities
         public Student Student { get; set; } = default!;
 
         [ForeignKey(nameof(ZoneId))]
-        public Zone Zone { get; set; } = default!;
+        public Zone? Zone { get; set; }
+                public string? ZoneName
+        {
+            get
+            {
+                return Zone?.Name;
+            }
+        }
+
+
     }
 }

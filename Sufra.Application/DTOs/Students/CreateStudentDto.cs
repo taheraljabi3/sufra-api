@@ -34,5 +34,8 @@ namespace Sufra.Application.DTOs.Students
         /// 🎚️ الدور (student, courier, admin, owner)
         /// </summary>
         public string? Role { get; set; } = "student";
+
+        public int? ZoneId { get; set; }
+        public string? RoomNo { get; set; }
     }
 }

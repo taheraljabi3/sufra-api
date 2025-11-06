@@ -41,9 +41,14 @@ namespace Sufra.Application.Mapping
                 .ReverseMap();
             CreateMap<CreateBatchDto, Batch>();
 
-            // 🚴‍♂️ المندوبين
-            CreateMap<Courier, CourierDto>().ReverseMap();
-            CreateMap<CreateCourierDto, Courier>();
+                        // 🚴‍♂️ المندوبين
+            CreateMap<Courier, CourierDto>()
+                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Student != null ? src.Student.Name : string.Empty))
+                .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.Student != null ? src.Student.Phone : string.Empty))
+                .ForMember(dest => dest.ZoneName, opt => opt.MapFrom(src => src.Zone != null ? src.Zone.Name : string.Empty))
+                .ReverseMap();
+
+CreateMap<CreateCourierDto, Courier>();
 
             // 🧾 التسليمات
             CreateMap<DeliveryProof, DeliveryProofDto>().ReverseMap();

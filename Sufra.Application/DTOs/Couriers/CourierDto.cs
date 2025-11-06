@@ -12,6 +12,8 @@ namespace Sufra.Application.DTOs.Couriers
         public string VehicleType { get; set; } = default!;
         public int MaxCapacity { get; set; }
         public string Status { get; set; } = default!;
+        public string ZoneName { get; set; } = string.Empty;
+
         public DateTime JoinedAt { get; set; }
     }
 }

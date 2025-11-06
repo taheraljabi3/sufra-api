@@ -31,7 +31,10 @@ namespace Sufra.Application.Services
         // ✅ جلب منطقة بالمعرف
         public async Task<ZoneDto?> GetByIdAsync(int id)
         {
-            var zone = await _context.Zones.FindAsync(id);
+            var zone = await _context.Zones
+                .AsNoTracking()
+                .FirstOrDefaultAsync(z => z.Id == id);
+
             return zone == null ? null : _mapper.Map<ZoneDto>(zone);
         }
 
@@ -39,6 +42,7 @@ namespace Sufra.Application.Services
         public async Task<ZoneDto> CreateAsync(CreateZoneDto dto)
         {
             var entity = _mapper.Map<Domain.Entities.Zone>(dto);
+            entity.Status = string.IsNullOrWhiteSpace(entity.Status) ? "active" : entity.Status;
             entity.CreatedAt = DateTime.UtcNow;
 
             _context.Zones.Add(entity);
@@ -47,23 +51,24 @@ namespace Sufra.Application.Services
             return _mapper.Map<ZoneDto>(entity);
         }
 
-        // ✅ التحديث
+        // ✅ تحديث بيانات المنطقة
         public async Task<ZoneDto?> UpdateAsync(int id, UpdateZoneDto dto)
         {
             var zone = await _context.Zones.FindAsync(id);
             if (zone == null) return null;
 
             zone.Name = dto.Name ?? zone.Name;
-            zone.ReferenceCode = dto.ReferenceCode ?? zone.ReferenceCode;
             zone.Type = dto.Type ?? zone.Type;
+            zone.ReferenceCode = dto.ReferenceCode ?? zone.ReferenceCode;
             zone.Status = dto.Status ?? zone.Status;
             zone.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
             return _mapper.Map<ZoneDto>(zone);
         }
 
-        // ✅ الحذف
+        // ✅ حذف منطقة
         public async Task<bool> DeleteAsync(int id)
         {
             var zone = await _context.Zones.FindAsync(id);

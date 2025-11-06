@@ -111,6 +111,29 @@ namespace Sufra.API.Controllers
                 return StatusCode(500, new { message = "حدث خطأ داخلي.", details = ex.Message });
             }
         }
+// ✏️ تحديث اشتراك (للأدمن فقط)
+[Authorize(Roles = "admin,owner")]
+[HttpPut("{id:int}")]
+public async Task<IActionResult> Update(int id, [FromBody] UpdateSubscriptionDto dto)
+{
+    try
+    {
+        var result = await _subscriptionService.UpdateAsync(id, dto);
+        if (result == null)
+            return NotFound(new { message = "❌ الاشتراك غير موجود." });
+
+        return Ok(new
+        {
+            message = "✅ تم تحديث الاشتراك بنجاح.",
+            data = result
+        });
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "❌ خطأ أثناء تحديث الاشتراك {Id}", id);
+        return StatusCode(500, new { message = "حدث خطأ أثناء التحديث.", details = ex.Message });
+    }
+}
 
         // ============================================================
         /// <summary>❌ إلغاء اشتراك (للأدمن أو الطالب نفسه)</summary>

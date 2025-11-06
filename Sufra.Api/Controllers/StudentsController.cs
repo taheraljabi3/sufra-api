@@ -35,64 +35,59 @@ namespace Sufra.API.Controllers
             _logger = logger;
         }
 
+// =====================================================================
+/// <summary>
+/// 📋 جلب جميع الطلاب مع بيانات السكن (للأدمن أو الأونر فقط)
+/// </summary>
+[Authorize(Roles = "admin,owner")]
+[HttpGet]
+[ProducesResponseType(StatusCodes.Status200OK)]
+public async Task<IActionResult> GetAll()
+{
+    try
+    {
+        var result = await _studentService.GetAllAsync();
+
+        if (!result.Any())
+            return Ok(new { message = "⚠️ لا توجد سجلات طلاب حالياً." });
+
+        return Ok(result);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "❌ خطأ أثناء جلب بيانات الطلاب");
+        return StatusCode(500, new { message = "⚠️ حدث خطأ أثناء تحميل بيانات الطلاب." });
+    }
+}
+
+// =====================================================================
+/// <summary>
+/// 🔍 جلب طالب عبر الرقم الجامعي (مع بيانات السكن)
+/// </summary>
+[Authorize(Roles = "admin,owner")]
+[HttpGet("university/{universityId}")]
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public async Task<IActionResult> GetByUniversityId(string universityId)
+{
+    try
+    {
+        var student = await _studentService.GetByUniversityIdAsync(universityId);
+
+        if (student == null)
+            return NotFound(new { message = "❌ الطالب غير موجود بالرقم الجامعي." });
+
+        return Ok(student);
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "❌ خطأ أثناء جلب بيانات الطالب");
+        return StatusCode(500, new { message = "⚠️ حدث خطأ أثناء تحميل بيانات الطالب." });
+    }
+}
         // =====================================================================
         /// <summary>
-        /// 📋 جلب جميع الطلاب (للمشرف أو الأونر فقط)
-        /// </summary>
-        [Authorize(Roles = "admin,owner")]
-        [HttpGet]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        public async Task<IActionResult> GetAll()
-        {
-            var result = await _context.Students
-                .Select(s => new
-                {
-                    s.Id,
-                    s.UniversityId,
-                    s.Name,
-                    s.Email,
-                    s.Phone,
-                    s.Status,
-                    Role = s.Role ?? "student",
-                    s.CreatedAt
-                })
-                .ToListAsync();
-
-            return Ok(result);
-        }
-
-        // =====================================================================
-        /// <summary>
-        /// 🔍 جلب طالب عبر الرقم الجامعي (للأدمن أو الأونر)
-        /// </summary>
-        [Authorize(Roles = "admin,owner")]
-        [HttpGet("university/{universityId}")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> GetByUniversityId(string universityId)
-        {
-            var student = await _context.Students
-                .FirstOrDefaultAsync(s => s.UniversityId == universityId);
-
-            if (student == null)
-                return NotFound(new { message = "❌ الطالب غير موجود بالرقم الجامعي." });
-
-            return Ok(new
-            {
-                student.Id,
-                student.UniversityId,
-                student.Name,
-                student.Email,
-                student.Phone,
-                student.Status,
-                student.Role,
-                student.CreatedAt
-            });
-        }
-
-        // =====================================================================
-        /// <summary>
-        /// ➕ إنشاء حساب جديد للطالب (مفتوح بدون توكن)
+        /// ➕ تسجيل طالب جديد بنفسه (دائمًا بدور student)
         /// </summary>
         [AllowAnonymous]
         [HttpPost("register")]
@@ -116,7 +111,7 @@ namespace Sufra.API.Controllers
                 Email = dto.Email,
                 Phone = dto.Phone,
                 Password = hashedPassword,
-                Role = "student", // 🔒 التسجيل العادي دائمًا طالب
+                Role = "student",
                 Status = "active",
                 CreatedAt = DateTime.UtcNow
             };
@@ -141,7 +136,7 @@ namespace Sufra.API.Controllers
 
         // =====================================================================
         /// <summary>
-        /// 👑 إنشاء حساب جديد بواسطة الأونر (يتطلب صلاحية Owner)
+        /// 👑 إنشاء حساب جديد بواسطة الأونر (يمكن تحديد الدور)
         /// </summary>
         [Authorize(Roles = "owner")]
         [HttpPost("create-by-owner")]
@@ -159,6 +154,10 @@ namespace Sufra.API.Controllers
 
             var hashedPassword = BCrypt.Net.BCrypt.HashPassword(dto.Password);
             var role = string.IsNullOrWhiteSpace(dto.Role) ? "student" : dto.Role.ToLower();
+
+            // 🚫 منع إنشاء Owner آخر
+            if (role == "owner")
+                return Forbid("🚫 لا يمكن إنشاء مستخدم بدور 'owner' جديد من النظام.");
 
             var user = new Domain.Entities.Student
             {
@@ -190,42 +189,61 @@ namespace Sufra.API.Controllers
                 });
         }
 
-        // =====================================================================
-        /// <summary>
-        /// 🔐 تسجيل الدخول عبر الرقم الجامعي وكلمة المرور
-        /// </summary>
-        [AllowAnonymous]
-        [HttpPost("login")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
+// =====================================================================
+/// <summary>
+/// 🔐 تسجيل الدخول عبر الرقم الجامعي وكلمة المرور
+/// </summary>
+[AllowAnonymous]
+[HttpPost("login")]
+[ProducesResponseType(StatusCodes.Status200OK)]
+[ProducesResponseType(StatusCodes.Status401Unauthorized)]
+[ProducesResponseType(StatusCodes.Status404NotFound)]
+public async Task<IActionResult> Login([FromBody] LoginDto dto)
+{
+    var student = await _context.Students
+        .FirstOrDefaultAsync(s => s.UniversityId == dto.UniversityId);
+
+    if (student == null)
+        return NotFound(new { message = "❌ الطالب غير موجود." });
+
+    bool valid = BCrypt.Net.BCrypt.Verify(dto.Password, student.Password);
+    if (!valid)
+        return Unauthorized(new { message = "❌ كلمة المرور غير صحيحة." });
+
+    // ✅ نحاول جلب بيانات المندوب إذا كان هذا المستخدم من نوع Courier
+    int? courierId = null;
+    int? zoneId = null;
+
+    if (student.Role != null && student.Role.ToLower() == "courier")
+    {
+        var courier = await _context.Couriers
+            .FirstOrDefaultAsync(c => c.StudentId == student.Id);
+
+        if (courier != null)
         {
-            var student = await _context.Students
-                .FirstOrDefaultAsync(s => s.UniversityId == dto.UniversityId);
-
-            if (student == null)
-                return NotFound(new { message = "❌ الطالب غير موجود." });
-
-            bool valid = BCrypt.Net.BCrypt.Verify(dto.Password, student.Password);
-            if (!valid)
-                return Unauthorized(new { message = "❌ كلمة المرور غير صحيحة." });
-
-            // ✅ توليد JWT Token
-            var token = GenerateJwtToken(student);
-
-            return Ok(new
-            {
-                message = "✅ تسجيل الدخول ناجح",
-                student.Id,
-                student.UniversityId,
-                student.Name,
-                student.Email,
-                student.Role,
-                student.Status,
-                token
-            });
+            courierId = courier.Id;
+            zoneId = courier.ZoneId; // ✅ نحفظ رقم المنطقة للمندوب
         }
+    }
+
+    var token = GenerateJwtToken(student);
+
+    // ✅ إعادة جميع البيانات بما في ذلك ZoneId
+    return Ok(new
+    {
+        message = "✅ تسجيل الدخول ناجح",
+        Id = student.Id,
+        UniversityId = student.UniversityId,
+        Name = student.Name,
+        Email = student.Email,
+        Role = student.Role,
+        Status = student.Status,
+        CourierId = courierId, // 🔹 رقم المندوب
+        ZoneId = zoneId,       // 🔹 رقم المنطقة الجديدة
+        token = token
+    });
+}
+
 
         // =====================================================================
         /// <summary>
@@ -238,6 +256,10 @@ namespace Sufra.API.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
+            var currentRole = User.FindFirstValue(ClaimTypes.Role);
+            if (dto.Role != null && currentRole != "owner")
+                return Forbid("🚫 فقط الـ Owner يمكنه تعديل الدور.");
+
             var result = await _studentService.UpdateAsync(id, dto);
             if (result == null)
                 return NotFound(new { message = "❌ الطالب غير موجود." });
@@ -245,20 +267,52 @@ namespace Sufra.API.Controllers
             return Ok(result);
         }
 
-        // =====================================================================
-        /// <summary>
-        /// 🗑️ حذف طالب (للأدمن أو الأونر)
-        /// </summary>
-        [Authorize(Roles = "admin,owner")]
-        [HttpDelete("{id:int}")]
-        public async Task<IActionResult> Delete(int id)
-        {
-            var success = await _studentService.DeleteAsync(id);
-            if (!success)
-                return NotFound(new { message = "❌ الطالب غير موجود." });
+      // =====================================================================
+/// <summary>
+/// 🗑️ حذف طالب (للأونر فقط)
+/// </summary>
+[Authorize(Roles = "owner")]
+[HttpDelete("{id:int}")]
+public async Task<IActionResult> Delete(int id)
+{
+    try
+    {
+        var success = await _studentService.DeleteAsync(id);
 
-            return NoContent();
+        if (!success)
+        {
+            return NotFound(new
+            {
+                message = "❌ الطالب غير موجود."
+            });
         }
+
+        // ✅ في حال الحذف الناجح
+        return Ok(new
+        {
+            message = "✅ تم حذف الطالب بنجاح."
+        });
+    }
+    catch (DbUpdateException ex)
+    {
+        // ⚠️ في حال وجود علاقات مرتبطة (مثل MealRequests)
+        Console.WriteLine($"⚠️ Delete failed for student {id}: {ex.InnerException?.Message ?? ex.Message}");
+        return BadRequest(new
+        {
+            message = "❌ لا يمكن حذف الطالب لارتباطه بسجلات أخرى في النظام."
+        });
+    }
+    catch (Exception ex)
+    {
+        // ⚠️ لأي خطأ غير متوقع
+        Console.WriteLine($"❌ Unexpected delete error for student {id}: {ex.Message}");
+        return StatusCode(500, new
+        {
+            message = "⚠️ حدث خطأ داخلي غير متوقع أثناء حذف الطالب."
+        });
+    }
+}
+
 
         // =====================================================================
         // 🧠 توليد JWT Token

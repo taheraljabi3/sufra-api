@@ -123,6 +123,17 @@ namespace Sufra.API.Controllers
             }
         }
 
+        
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateCourier(int id, [FromBody] UpdateCourierDto dto)
+        {
+            var updated = await _courierService.UpdateAsync(id, dto);
+            if (!updated)
+                return NotFound(new { message = "❌ لم يتم العثور على المندوب." });
+
+            return Ok(new { message = "✅ تم تحديث بيانات المندوب بنجاح." });
+        }
+
         // ============================================================
         /// <summary>🔄 تحديث حالة المندوب (نشط / غير نشط) — للأدمن أو المالك فقط</summary>
         // ============================================================

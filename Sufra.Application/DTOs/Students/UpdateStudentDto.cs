@@ -7,6 +7,11 @@ public class UpdateStudentDto
     public string? RoleName { get; set; }
     public string? UniversityId { get; set; }
     public string? Password { get; set; } // ✅ جديد - لتحديث كلمة المرور
+    public string? Role { get; set; }    // ✅ للأونر فقط
+
+    public int? ZoneId { get; set; }
+    public string? RoomNo { get; set; }
+
 
 
 }

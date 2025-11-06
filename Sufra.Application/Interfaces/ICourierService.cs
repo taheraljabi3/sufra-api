@@ -20,6 +20,9 @@ namespace Sufra.Application.Interfaces
         Task<CourierDto> CreateAsync(CreateCourierDto dto);
 
         // 🟠 تحديث حالة المندوب (نشط / غير متاح / خارج الخدمة)
+
+        Task<bool> UpdateAsync(int id, UpdateCourierDto dto);
+        
         Task<bool> UpdateStatusAsync(int id, string status);
     }
 }
