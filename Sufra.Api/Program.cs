@@ -74,7 +74,7 @@ builder.Services.AddCors(options =>
 {
     if (builder.Environment.IsDevelopment())
     {
-        // 🔓 أثناء التطوير: السماح الكامل
+        // 🔓 أثناء التطوير: السماح الكامل (مثل Vite أو React على localhost)
         options.AddPolicy("AllowFrontend", policy =>
         {
             policy
