@@ -56,8 +56,12 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
+<<<<<<< Updated upstream
     // ✅ فعّل HTTPS فقط في الإنتاج
     options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
+=======
+    options.RequireHttpsMetadata = false; // في التطوير يمكن تعطيله
+>>>>>>> Stashed changes
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -70,6 +74,21 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddAuthorization();
+
+// ============================================================
+// 🌐 إعداد CORS
+// ============================================================
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowLocalReact",
+        policy =>
+        {
+            policy.WithOrigins("https://sufra-api.onrender.com/", "https://sufra-api.onrender.com/")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+});
 
 // ============================================================
 // 🌐 إعداد الـ Controllers و JSON
@@ -101,13 +120,13 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🧩 تحميل تعليقات XML للتوثيق التلقائي
+    // 🧩 تحميل تعليقات XML (للتوثيق التلقائي)
     var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
     if (File.Exists(xmlPath))
         options.IncludeXmlComments(xmlPath);
 
-    // 🔐 دعم إدخال التوكن في Swagger UI
+    // 🧱 دعم إدخال التوكن في Swagger UI
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "أدخل التوكن هنا بصيغة: **Bearer {your token}**",
@@ -132,7 +151,7 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 
-    // 🧩 لتفادي تعارض أسماء DTOs
+    // 🧩 تجنب تضارب الأسماء في DTOs
     options.CustomSchemaIds(type => type.FullName);
 });
 
@@ -144,13 +163,16 @@ var app = builder.Build();
 // ============================================================
 // 🔍 تفعيل Swagger دائمًا (في dev و prod)
 // ============================================================
-app.UseSwagger();
-app.UseSwaggerUI(options =>
+if (app.Environment.IsDevelopment())
 {
-    options.DocumentTitle = "📘 Sufra API Docs";
-    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
-    options.RoutePrefix = "docs"; // ✅ يمكن الوصول من /docs
-});
+    app.UseSwagger();
+    app.UseSwaggerUI(options =>
+    {
+        options.DocumentTitle = "📘 Sufra API Docs";
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
+        options.RoutePrefix = "docs"; // يمكن الوصول عبر /docs
+    });
+}
 
 // ============================================================
 // 🧰 صفحة الأخطاء في وضع التطوير فقط
@@ -165,6 +187,7 @@ if (app.Environment.IsDevelopment())
 // ============================================================
 app.UseHttpsRedirection();
 
+<<<<<<< Updated upstream
 // ✅ السماح للـ Frontend بالوصول من نطاقات محددة (بدلاً من AllowAnyOrigin)
 app.UseCors(policy =>
     policy.WithOrigins(
@@ -173,6 +196,10 @@ app.UseCors(policy =>
     )
     .AllowAnyMethod()
     .AllowAnyHeader());
+=======
+// ✅ تفعيل CORS قبل المصادقة
+app.UseCors("AllowLocalReact");
+>>>>>>> Stashed changes
 
 // ✅ تفعيل المصادقة والتفويض
 app.UseAuthentication();
