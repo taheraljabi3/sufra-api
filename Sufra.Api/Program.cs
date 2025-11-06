@@ -19,7 +19,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<SufraDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-Console.WriteLine($"🔗 DB Connection: {builder.Configuration.GetConnectionString("DefaultConnection")}");
+// 🔐 لا تطبع بيانات الاتصال لتجنب كشف كلمة السر
+Console.WriteLine("🔗 Database connection initialized successfully.");
 
 // ============================================================
 // ⚙️ تسجيل الخدمات (Dependency Injection)
@@ -42,7 +43,10 @@ builder.Services.AddScoped<INotificationService, NotificationService>();
 // ============================================================
 // 🔐 إعداد الـ JWT Authentication
 // ============================================================
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "SUFRA_SECRET_KEY_2025_!CHANGE_THIS!";
+
+// ✅ لا تستخدم fallback في الإنتاج (تحسين الأمان)
+var jwtKey = builder.Configuration["Jwt:Key"]
+    ?? throw new InvalidOperationException("❌ JWT key not found in configuration.");
 var keyBytes = Encoding.ASCII.GetBytes(jwtKey);
 
 builder.Services.AddAuthentication(options =>
@@ -52,7 +56,8 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = true; // ✅ في Render، يجب أن يكون HTTPS
+    // ✅ فعّل HTTPS فقط في الإنتاج
+    options.RequireHttpsMetadata = !builder.Environment.IsDevelopment();
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -84,10 +89,10 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v2", new OpenApiInfo
+    options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Sufra API",
-        Version = "v2",
+        Version = "v1",
         Description = "🚀 واجهة برمجة تطبيقات نظام سُفرة (MVP)\nتشمل إدارة الطلاب، الطلبات، الاشتراكات، والمندوبين.",
         Contact = new OpenApiContact
         {
@@ -143,20 +148,31 @@ app.UseSwagger();
 app.UseSwaggerUI(options =>
 {
     options.DocumentTitle = "📘 Sufra API Docs";
-    options.SwaggerEndpoint("/swagger/v2/swagger.json", "Sufra API v2");
+    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Sufra API v1");
     options.RoutePrefix = "docs"; // ✅ يمكن الوصول من /docs
 });
+
+// ============================================================
+// 🧰 صفحة الأخطاء في وضع التطوير فقط
+// ============================================================
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
 
 // ============================================================
 // 🔐 الإعدادات العامة للتطبيق
 // ============================================================
 app.UseHttpsRedirection();
 
-// ✅ السماح للـ Frontend بالوصول من أي دومين (مثلاً Flutter أو Retool)
+// ✅ السماح للـ Frontend بالوصول من نطاقات محددة (بدلاً من AllowAnyOrigin)
 app.UseCors(policy =>
-    policy.AllowAnyOrigin()
-          .AllowAnyMethod()
-          .AllowAnyHeader());
+    policy.WithOrigins(
+        "https://sufra.app",
+        "https://sufra-admin.app"
+    )
+    .AllowAnyMethod()
+    .AllowAnyHeader());
 
 // ✅ تفعيل المصادقة والتفويض
 app.UseAuthentication();
@@ -180,6 +196,3 @@ record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
 {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
 }
-
-
-
