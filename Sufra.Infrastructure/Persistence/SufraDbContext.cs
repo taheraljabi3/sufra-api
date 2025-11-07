@@ -20,68 +20,56 @@ namespace Sufra.Infrastructure.Persistence
         public DbSet<Role> Roles => Set<Role>();
         public DbSet<Notification> Notifications => Set<Notification>();
 
-
+        // ============================================================
+        // ⚙️ العلاقات والجداول
+        // ============================================================
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // ============================================================
             // 🧩 Subscription ↔ Student (1 - Many)
-            // ============================================================
             modelBuilder.Entity<Subscription>()
                 .HasOne(s => s.Student)
                 .WithMany(st => st.Subscriptions)
                 .HasForeignKey(s => s.StudentId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ============================================================
             // 🧩 MealRequest ↔ Student (Many - 1)
-            // ============================================================
             modelBuilder.Entity<MealRequest>()
                 .HasOne(m => m.Student)
                 .WithMany(st => st.MealRequests)
                 .HasForeignKey(m => m.StudentId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 MealRequest ↔ Subscription (Many - 1)
-            // ============================================================
             modelBuilder.Entity<MealRequest>()
                 .HasOne(m => m.Subscription)
                 .WithMany()
                 .HasForeignKey(m => m.SubscriptionId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 MealRequest ↔ Zone (Many - 1)
-            // ============================================================
             modelBuilder.Entity<MealRequest>()
                 .HasOne(m => m.Zone)
                 .WithMany(z => z.MealRequests)
                 .HasForeignKey(m => m.ZoneId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 DeliveryProof ↔ MealRequest (1 - 1)
-            // ============================================================
             modelBuilder.Entity<DeliveryProof>()
                 .HasOne(dp => dp.MealRequest)
                 .WithOne(mr => mr.DeliveryProof)
                 .HasForeignKey<DeliveryProof>(dp => dp.MealRequestId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ============================================================
             // 🧩 DeliveryProof ↔ Courier (Many - 1)
-            // ============================================================
             modelBuilder.Entity<DeliveryProof>()
                 .HasOne(dp => dp.Courier)
                 .WithMany(c => c.DeliveryProofs)
                 .HasForeignKey(dp => dp.CourierId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 BatchItem (Many - Many) Batch ↔ MealRequest
-            // ============================================================
             modelBuilder.Entity<BatchItem>()
                 .HasKey(bi => new { bi.BatchId, bi.ReqId });
 
@@ -97,74 +85,59 @@ namespace Sufra.Infrastructure.Persistence
                 .HasForeignKey(bi => bi.ReqId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 Batch ↔ Zone (Many - 1)
-            // ============================================================
             modelBuilder.Entity<Batch>()
                 .HasOne(b => b.Zone)
                 .WithMany(z => z.Batches)
                 .HasForeignKey(b => b.ZoneId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 Batch ↔ Courier (Many - 1)
-            // ============================================================
             modelBuilder.Entity<Batch>()
                 .HasOne(b => b.Courier)
                 .WithMany(c => c.Batches)
                 .HasForeignKey(b => b.CourierId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // ============================================================
             // 🧩 Courier ↔ Student (Many - 1)
-            // ============================================================
             modelBuilder.Entity<Courier>()
                 .HasOne(c => c.Student)
                 .WithMany()
                 .HasForeignKey(c => c.StudentId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 Courier ↔ Zone (Many - 1)
-            // ============================================================
             modelBuilder.Entity<Courier>()
                 .HasOne(c => c.Zone)
                 .WithMany(z => z.Couriers)
                 .HasForeignKey(c => c.ZoneId)
                 .OnDelete(DeleteBehavior.NoAction);
 
-            // ============================================================
             // 🧩 StudentHousing ↔ Student (Many - 1)
-            // ============================================================
             modelBuilder.Entity<StudentHousing>()
                 .HasOne(sh => sh.Student)
                 .WithMany(st => st.Housings)
                 .HasForeignKey(sh => sh.StudentId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ============================================================
             // 🧩 StudentHousing ↔ Zone (Many - 1)
-            // ============================================================
             modelBuilder.Entity<StudentHousing>()
                 .HasOne(sh => sh.Zone)
                 .WithMany(z => z.StudentHousings)
                 .HasForeignKey(sh => sh.ZoneId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // ============================================================
-            // ⚙️ توحيد أسماء الجداول بالحروف الصغيرة (PostgreSQL)
-            // ============================================================
+            // ⚙️ توحيد أسماء الجداول والأعمدة بالحروف الصغيرة (PostgreSQL)
             foreach (var entity in modelBuilder.Model.GetEntityTypes())
             {
-                // تحويل اسم الجدول إلى lowercase
                 entity.SetTableName(entity.GetTableName()?.ToLower());
 
-                // تحويل أسماء الأعمدة إلى lowercase أيضًا
                 foreach (var property in entity.GetProperties())
                     property.SetColumnName(property.GetColumnBaseName().ToLower());
             }
+        }
 
-                    // ============================================================
+        // ============================================================
         // 🕒 تحويل كل DateTime إلى UTC تلقائيًا (حل مشكلة PostgreSQL)
         // ============================================================
         protected override void ConfigureConventions(ModelConfigurationBuilder builder)
@@ -176,8 +149,6 @@ namespace Sufra.Infrastructure.Persistence
                         : v.ToUniversalTime(),
                     v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
                 );
-        }
-
         }
     }
 }
