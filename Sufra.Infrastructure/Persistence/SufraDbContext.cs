@@ -163,6 +163,21 @@ namespace Sufra.Infrastructure.Persistence
                 foreach (var property in entity.GetProperties())
                     property.SetColumnName(property.GetColumnBaseName().ToLower());
             }
+
+                    // ============================================================
+        // 🕒 تحويل كل DateTime إلى UTC تلقائيًا (حل مشكلة PostgreSQL)
+        // ============================================================
+        protected override void ConfigureConventions(ModelConfigurationBuilder builder)
+        {
+            builder.Properties<DateTime>()
+                .HaveConversion(
+                    v => v.Kind == DateTimeKind.Unspecified
+                        ? DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                        : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                );
+        }
+
         }
     }
 }
