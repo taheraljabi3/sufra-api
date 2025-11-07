@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Sufra.Domain.Entities;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Sufra.Infrastructure.Persistence
 {
@@ -133,7 +135,11 @@ namespace Sufra.Infrastructure.Persistence
                 entity.SetTableName(entity.GetTableName()?.ToLower());
 
                 foreach (var property in entity.GetProperties())
-                    property.SetColumnName(property.GetColumnName(StoreObjectIdentifier.Table(entity.GetTableName()!, null))?.ToLower());
+                {
+                    var columnName = property.GetColumnName(StoreObjectIdentifier.Table(entity.GetTableName()!, null));
+                    if (!string.IsNullOrEmpty(columnName))
+                        property.SetColumnName(columnName.ToLower());
+                }
             }
         }
 
@@ -142,27 +148,26 @@ namespace Sufra.Infrastructure.Persistence
         // ============================================================
         protected override void ConfigureConventions(ModelConfigurationBuilder builder)
         {
-            // DateTime العادية
-            builder.Properties<DateTime>()
-                .HaveConversion(
-                    v => v.Kind == DateTimeKind.Unspecified
-                        ? DateTime.SpecifyKind(v, DateTimeKind.Utc)
-                        : v.ToUniversalTime(),
-                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
-                );
+            var dateTimeConverter = new ValueConverter<DateTime, DateTime>(
+                v => v.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(v, DateTimeKind.Utc)
+                    : v.ToUniversalTime(),
+                v => DateTime.SpecifyKind(v, DateTimeKind.Utc)
+            );
 
-            // DateTime? (nullable)
-            builder.Properties<DateTime?>()
-                .HaveConversion(
-                    v => v.HasValue
-                        ? (v.Value.Kind == DateTimeKind.Unspecified
-                            ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)
-                            : v.Value.ToUniversalTime())
-                        : v,
-                    v => v.HasValue
+            var nullableDateTimeConverter = new ValueConverter<DateTime?, DateTime?>(
+                v => v.HasValue
+                    ? (v.Value.Kind == DateTimeKind.Unspecified
                         ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)
-                        : v
-                );
+                        : v.Value.ToUniversalTime())
+                    : v,
+                v => v.HasValue
+                    ? DateTime.SpecifyKind(v.Value, DateTimeKind.Utc)
+                    : v
+            );
+
+            builder.Properties<DateTime>().HaveConversion(dateTimeConverter);
+            builder.Properties<DateTime?>().HaveConversion(nullableDateTimeConverter);
         }
     }
 }
