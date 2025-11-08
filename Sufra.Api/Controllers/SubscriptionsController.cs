@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sufra.Application.DTOs.Subscriptions;
@@ -14,6 +15,11 @@ namespace Sufra.API.Controllers
         private readonly ISubscriptionService _subscriptionService;
         private readonly ILogger<SubscriptionsController> _logger;
 
+        // ثوابت الأدوار لتفادي أخطاء حالة الأحرف
+        private const string RoleAdmin = "admin";
+        private const string RoleOwner = "owner";
+        private const string RoleStudent = "student";
+
         public SubscriptionsController(
             ISubscriptionService subscriptionService,
             ILogger<SubscriptionsController> logger)
@@ -22,10 +28,37 @@ namespace Sufra.API.Controllers
             _logger = logger;
         }
 
-        // ============================================================
+        // ===================== Helpers ======================
+        private int? TryGetUserId()
+        {
+            // أولًا نحاول مع Claim مخصص باسم UserId إن وجد
+            var userId = User.FindFirst("UserId")?.Value;
+
+            // أو المعرف القياسي للمستخدم (NameIdentifier / sub)
+            userId ??= User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            userId ??= User.FindFirst("sub")?.Value;
+
+            if (int.TryParse(userId, out var id))
+                return id;
+
+            return null;
+        }
+
+        private bool IsInRole(params string[] roles)
+        {
+            foreach (var r in roles)
+            {
+                // IsInRole يعتمد على المطابقة النصية؛ نوحّد للأحرف الصغيرة
+                if (User.IsInRole(r) || User.Claims.Any(c =>
+                        c.Type == ClaimTypes.Role && string.Equals(c.Value, r, StringComparison.OrdinalIgnoreCase)))
+                    return true;
+            }
+            return false;
+        }
+        // ====================================================
+
         /// <summary>📋 جلب جميع الاشتراكات (للمشرف فقط)</summary>
-        // ============================================================
-        [Authorize(Roles = "admin,owner")]
+        [Authorize(Roles = $"{RoleAdmin},{RoleOwner}")]
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -37,10 +70,8 @@ namespace Sufra.API.Controllers
             });
         }
 
-        // ============================================================
         /// <summary>🔍 جلب اشتراك محدد بالمعرف</summary>
-        // ============================================================
-        [Authorize(Roles = "admin,owner,student")]
+        [Authorize(Roles = $"{RoleAdmin},{RoleOwner},{RoleStudent}")]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
         {
@@ -51,29 +82,23 @@ namespace Sufra.API.Controllers
             return Ok(result);
         }
 
-        // ============================================================
         /// <summary>📦 جلب الاشتراك النشط للطالب الحالي</summary>
-        // ============================================================
-        [Authorize(Roles = "student,admin,owner")]
+        /// <param name="studentId">إن تم تمريره من الأدمن/المالك سيُستخدم بدل المعرّف القادم من التوكن</param>
+        [Authorize(Roles = $"{RoleStudent},{RoleAdmin},{RoleOwner}")]
         [HttpGet("active")]
-        public async Task<IActionResult> GetActiveForCurrentStudent()
+        public async Task<IActionResult> GetActiveForCurrentStudent([FromQuery] int? studentId = null)
         {
             // 🧭 استخراج المعرف من التوكن
-            var userIdClaim = User.FindFirst("UserId")?.Value;
-            var roleClaim = User.FindFirst("Role")?.Value ?? "student";
-
-            if (userIdClaim == null)
+            var currentUserId = TryGetUserId();
+            if (currentUserId is null)
                 return Unauthorized(new { message = "❌ لم يتم التعرف على المستخدم من التوكن." });
 
-            int studentId = int.Parse(userIdClaim);
+            // 👑 الأدمن أو المالك يمكنه الاستعلام عن طالب آخر
+            int effectiveStudentId = currentUserId.Value;
+            if (studentId.HasValue && IsInRole(RoleAdmin, RoleOwner))
+                effectiveStudentId = studentId.Value;
 
-            // 👑 الأدمن يمكنه تمرير query إذا أراد جلب اشتراك طالب آخر
-            if (roleClaim is "Admin" or "Owner" && Request.Query.ContainsKey("studentId"))
-            {
-                int.TryParse(Request.Query["studentId"], out studentId);
-            }
-
-            var result = await _subscriptionService.GetActiveByStudentAsync(studentId);
+            var result = await _subscriptionService.GetActiveByStudentAsync(effectiveStudentId);
             if (result == null)
                 return NotFound(new { message = "⚠️ لا يوجد اشتراك نشط لهذا الطالب." });
 
@@ -84,10 +109,8 @@ namespace Sufra.API.Controllers
             });
         }
 
-        // ============================================================
         /// <summary>➕ إنشاء اشتراك جديد (للأدمن فقط)</summary>
-        // ============================================================
-        [Authorize(Roles = "admin,owner")]
+        [Authorize(Roles = $"{RoleAdmin},{RoleOwner}")]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateSubscriptionDto dto)
         {
@@ -111,34 +134,33 @@ namespace Sufra.API.Controllers
                 return StatusCode(500, new { message = "حدث خطأ داخلي.", details = ex.Message });
             }
         }
-// ✏️ تحديث اشتراك (للأدمن فقط)
-[Authorize(Roles = "admin,owner")]
-[HttpPut("{id:int}")]
-public async Task<IActionResult> Update(int id, [FromBody] UpdateSubscriptionDto dto)
-{
-    try
-    {
-        var result = await _subscriptionService.UpdateAsync(id, dto);
-        if (result == null)
-            return NotFound(new { message = "❌ الاشتراك غير موجود." });
 
-        return Ok(new
+        /// <summary>✏️ تحديث اشتراك (للأدمن فقط)</summary>
+        [Authorize(Roles = $"{RoleAdmin},{RoleOwner}")]
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateSubscriptionDto dto)
         {
-            message = "✅ تم تحديث الاشتراك بنجاح.",
-            data = result
-        });
-    }
-    catch (Exception ex)
-    {
-        _logger.LogError(ex, "❌ خطأ أثناء تحديث الاشتراك {Id}", id);
-        return StatusCode(500, new { message = "حدث خطأ أثناء التحديث.", details = ex.Message });
-    }
-}
+            try
+            {
+                var result = await _subscriptionService.UpdateAsync(id, dto);
+                if (result == null)
+                    return NotFound(new { message = "❌ الاشتراك غير موجود." });
 
-        // ============================================================
+                return Ok(new
+                {
+                    message = "✅ تم تحديث الاشتراك بنجاح.",
+                    data = result
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ خطأ أثناء تحديث الاشتراك {Id}", id);
+                return StatusCode(500, new { message = "حدث خطأ أثناء التحديث.", details = ex.Message });
+            }
+        }
+
         /// <summary>❌ إلغاء اشتراك (للأدمن أو الطالب نفسه)</summary>
-        // ============================================================
-        [Authorize(Roles = "admin,owner,student")]
+        [Authorize(Roles = $"{RoleAdmin},{RoleOwner},{RoleStudent}")]
         [HttpPut("{id:int}/cancel")]
         public async Task<IActionResult> Cancel(int id)
         {
